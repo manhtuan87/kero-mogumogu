@@ -1,8 +1,10 @@
 /* ケロちゃん もぐもぐ — offline support.
    Keeps the game on the device so it plays without a connection.
    Bump VERSION whenever the game files change; the new files are fetched
-   in the background and used from the next launch. */
-var VERSION = 'kero-v3';
+   in the background and used from the next launch.
+   Other games on the same site (ケロちゃん ぴよぴよポン) share the cache storage,
+   so only caches whose names start with "kero-" are ever deleted here. */
+var VERSION = 'kero-v4';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
@@ -18,7 +20,7 @@ self.addEventListener('install', function (e) {
 
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== VERSION && k !== FONTS; })
+    return Promise.all(keys.filter(function (k) { return k.indexOf('kero-') === 0 && k !== VERSION && k !== FONTS; })
       .map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
