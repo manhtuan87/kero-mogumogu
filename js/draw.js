@@ -535,6 +535,48 @@ var Draw = (function () {
     ctx.restore();
   }
 
+  // Warp hats: a magician's hat standing upside down; hats of the same colour are a pair.
+  var HAT_COLORS = [['#a58bff', '#6f53d9'], ['#57c9cf', '#2e8f95'], ['#ffa46e', '#d9723c']];
+  function hat(ctx, x, y, t, pair) {
+    var col = HAT_COLORS[pair % HAT_COLORS.length];
+    ctx.save(); ctx.translate(x, y);
+    ctx.lineJoin = 'round';
+    // crown under the brim
+    ctx.beginPath();
+    ctx.moveTo(-19, 2); ctx.lineTo(-16, 26); ctx.quadraticCurveTo(0, 32, 16, 26); ctx.lineTo(19, 2); ctx.closePath();
+    paint(ctx, col[1], INK, 3);
+    roundRect(ctx, -18, 9, 36, 8, 3); paint(ctx, col[0]);
+    D_star(ctx, 0, 13, 4.5);
+    // brim and the swirling opening
+    ellipse(ctx, 0, 0, 29, 10); paint(ctx, col[0], INK, 3);
+    ellipse(ctx, 0, -1, 21, 6.5); paint(ctx, '#2b1d40');
+    ctx.save(); ellipse(ctx, 0, -1, 20, 6); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    for (var k = 0; k < 3; k++) {
+      ctx.beginPath(); ctx.ellipse(0, -1, 17 - k * 5.5, 5 - k * 1.5, 0, t * 3.5 + k * 2, t * 3.5 + k * 2 + 3.6); ctx.stroke();
+    }
+    ctx.restore();
+    // twinkles
+    for (var j = 0; j < 3; j++) {
+      var ph = (t * 0.8 + j / 3) % 1, a = j * 2.1 + t * 0.6;
+      ctx.globalAlpha = Math.sin(ph * Math.PI);
+      sparkle(ctx, Math.cos(a) * 30, -10 - ph * 22, 3.5, '#fff7b0');
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  function D_star(ctx, x, y, r) {
+    ctx.save(); ctx.translate(x, y); starPath(ctx, r, r * 0.5); paint(ctx, '#ffe066'); ctx.restore();
+  }
+
+  // Spinning spike bar with a bolt in the middle.
+  function rotor(ctx, e, cx, cy) {
+    spikes(ctx, { x1: e[0], y1: e[1], x2: e[2], y2: e[3] });
+    circle(ctx, cx, cy, 9); paint(ctx, '#ffd35c', INK, 2.6);
+    ctx.beginPath(); ctx.moveTo(cx - 4, cy); ctx.lineTo(cx + 4, cy); ctx.moveTo(cx, cy - 4); ctx.lineTo(cx, cy + 4);
+    ctx.lineCap = 'round'; paint(ctx, null, INK, 2);
+  }
+
   function spikes(ctx, s) {
     var dx = s.x2 - s.x1, dy = s.y2 - s.y1, L = Math.sqrt(dx * dx + dy * dy);
     ctx.save(); ctx.translate(s.x1, s.y1); ctx.rotate(Math.atan2(dy, dx));
@@ -654,7 +696,7 @@ var Draw = (function () {
     INK: INK, THEMES: THEMES,
     circle: circle, ellipse: ellipse, paint: paint, roundRect: roundRect,
     frog: frog, critter: critter, food: food, rope: rope, pin: pin, rail: rail, star: star, starPath: starPath,
-    bubble: bubble, blower: blower, hook: hook, jelly: jelly, spikes: spikes,
+    bubble: bubble, blower: blower, hook: hook, jelly: jelly, spikes: spikes, hat: hat, rotor: rotor,
     heart: heart, sparkle: sparkle, hand: hand, background: background, teardrop: teardrop
   };
 }());

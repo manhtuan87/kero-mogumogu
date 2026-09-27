@@ -2,11 +2,11 @@
    Keeps the game on the device so it plays without a connection.
    Bump VERSION whenever the game files change; the new files are fetched
    in the background and used from the next launch. */
-var VERSION = 'kero-v2';
+var VERSION = 'kero-v3';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
-  'js/engine.js', 'js/levels.js', 'js/draw.js', 'js/sound.js', 'js/game.js',
+  'js/engine.js', 'js/levels-more.js', 'js/levels.js', 'js/draw.js', 'js/sound.js', 'js/game.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
 

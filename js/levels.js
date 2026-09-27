@@ -8,9 +8,9 @@
    tip: key of a one-time help message (see TIPS in game.js).
    live: the treat moves from the start (otherwise it waits for the first touch). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.LEVELS = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./levels-more.js'));
+  else root.LEVELS = factory(root.LEVELS_MORE || []);
+}(typeof self !== 'undefined' ? self : this, function (more) {
   'use strict';
 
   var candyMeadow = [
@@ -91,5 +91,5 @@
     { name: 'ドーナツの そら', food: 'donut', theme: 2, key: -2, stages: donutSky },
     { name: 'クッキーの もり', food: 'cookie', theme: 3, key: 3, stages: cookieForest },
     { name: 'にじいろ パーティー', food: 'mix', theme: 4, key: 5, stages: rainbowParty }
-  ].filter(function (w) { return w.stages.length; });   // worlds still being built stay hidden
+  ].concat(more).filter(function (w) { return w.stages.length; });   // worlds still being built stay hidden
 }));

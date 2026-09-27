@@ -100,6 +100,10 @@ var Sound = (function () {
       tone({ f: 440, f2: 370, type: 'triangle', vol: 0.18, d: 0.22 });
       tone({ f: 370, f2: 262, type: 'triangle', vol: 0.18, d: 0.4, when: 0.26 });
     },
+    warp: function () {
+      tone({ f: 330, f2: 1320, type: 'sine', vol: 0.22, d: 0.28 });
+      tone({ f: 1760, f2: 2640, type: 'triangle', vol: 0.06, d: 0.2, when: 0.12 });
+    },
     spike: function () {
       noise({ type: 'lowpass', f: 700, vol: 0.5, d: 0.2 });
       tone({ f: 220, f2: 90, type: 'square', vol: 0.08, d: 0.2 });

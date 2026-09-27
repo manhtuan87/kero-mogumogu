@@ -33,7 +33,8 @@
     cutTol: 8,         // swipe distance that still cuts a rope
     tapRope: 26,       // a tap this close to a rope cuts it
     tapBubble: 28,
-    tapBlower: 44
+    tapBlower: 44,
+    hatR: 24           // the treat enters a warp hat when this close to its middle
   };
 
   function Pt(x, y, im) { this.x = x; this.y = y; this.px = x; this.py = y; this.im = im; }
@@ -107,6 +108,12 @@
     }
   }
 
+  // Current ends of a spinning spike bar.
+  function rotorEnds(r, t) {
+    var a = r.a0 + r.speed * t, hx = Math.cos(a) * r.len / 2, hy = Math.sin(a) * r.len / 2;
+    return [r.x - hx, r.y - hy, r.x + hx, r.y + hy];
+  }
+
   function moveAnchor(p, mv, t) {
     var u = 0.5 - 0.5 * Math.cos(2 * Math.PI * t / mv.period + mv.phase);
     p.x = mv.x1 + (mv.x2 - mv.x1) * u;
@@ -130,8 +137,11 @@
 
   /* level: { candy:[x,y], frog:[x,y],
        ropes:[[ax,ay,len?, x2?,y2?,period?,phase?]], stars:[[x,y]], bubbles:[[x,y]],
-       blowers:[[x,y,deg]], hooks:[[x,y,r]], pads:[[x1,y1,x2,y2]], spikes:[[x1,y1,x2,y2]] }
-     opts.fast skips purely visual work (cut rope leftovers). */
+       blowers:[[x,y,deg]], hooks:[[x,y,r]], pads:[[x1,y1,x2,y2]], spikes:[[x1,y1,x2,y2]],
+       hats:[[ax,ay,bx,by]] (a pair of warp hats), rotors:[[x,y,length,degPerSec,startDeg]] (spinning spikes) }
+     opts.fast skips everything that is only for the picture (rope points, cut
+     leftovers). The treat moves exactly the same either way: it only feels a
+     rope's pin and length, never the rope points. */
   function World(level, opts) {
     this.level = level;
     this.fast = !!(opts && opts.fast);
@@ -157,6 +167,8 @@
     this.hooks = (level.hooks || []).map(function (h) { return { x: h[0], y: h[1], r: h[2], used: false }; });
     this.pads = (level.pads || []).map(function (p) { return { x1: p[0], y1: p[1], x2: p[2], y2: p[3], last: -9 }; });
     this.spikes = (level.spikes || []).map(function (s) { return { x1: s[0], y1: s[1], x2: s[2], y2: s[3] }; });
+    this.hats = (level.hats || []).map(function (h) { return { ax: h[0], ay: h[1], bx: h[2], by: h[3], cool: -1 }; });
+    this.rotors = (level.rotors || []).map(function (r) { return { x: r[0], y: r[1], len: r[2], speed: r[3] * Math.PI / 180, a0: (r[4] || 0) * Math.PI / 180 }; });
     // The treat waits until the child's first action, so how long they look
     // before starting never changes the outcome. Swinging starts and moving
     // pins set it off at once.
@@ -165,7 +177,7 @@
     for (var i = 0; i < this.bubbles.length; i++) {
       if (dist2(c.x, c.y, this.bubbles[i].x, this.bubbles[i].y) < sq(P.bubbleR)) { this.bubbles[i].state = 1; c.bubble = i; break; }
     }
-    this.settle();
+    if (!this.fast) this.settle();
   }
 
   // Let the ropes hang naturally before the level starts (candy held still).
@@ -187,7 +199,7 @@
   World.prototype.solve = function () {
     var c = this.candy, n = this.ropes.length, i, k;
     for (k = 0; k < 8 && n > 0; k++) for (i = 0; i < n; i++) leash(c, this.ropes[i]);
-    this.solveRopes();
+    if (!this.fast) this.solveRopes();
   };
 
   World.prototype.solveRopes = function () {
@@ -207,7 +219,7 @@
     var c = this.candy, i;
     for (i = 0; i < this.ropes.length; i++) if (this.ropes[i].mv) moveAnchor(this.ropes[i].pts[0], this.ropes[i].mv, this.t);
     if (this.held) return;   // everything rests until the first touch
-    this.integrateRopes();
+    if (!this.fast) this.integrateRopes();
     var inBubble = c.bubble >= 0;
     integrate(c, inBubble ? -P.buoyancy : P.gravity, inBubble ? P.dampBubble : P.dampCandy);
     this.solve();
@@ -265,9 +277,15 @@
       }
     }
 
+    for (i = 0; i < this.hats.length; i++) this.warp(this.hats[i], i);
+
     for (i = 0; i < this.spikes.length; i++) {
       var k = this.spikes[i];
       if (segDist(c.x, c.y, k.x1, k.y1, k.x2, k.y2).d < P.candyR + P.spikeHalf - 3) return this.lose('spike');
+    }
+    for (i = 0; i < this.rotors.length; i++) {
+      var e = rotorEnds(this.rotors[i], this.t);
+      if (segDist(c.x, c.y, e[0], e[1], e[2], e[3]).d < P.candyR + P.spikeHalf - 3) return this.lose('spike');
     }
 
     if (dist2(c.x, c.y, this.frog.x, this.frog.y) < sq(P.eatR)) return this.win();
@@ -293,6 +311,25 @@
     c.px = c.x - vx * DT; c.py = c.y - vy * DT;
   };
 
+  // Warp hats: going into one hat brings the treat out of the other one, still
+  // moving the same way. Ropes on the treat come off, a bubble stays.
+  World.prototype.warp = function (h, i) {
+    var c = this.candy, r2 = P.hatR * P.hatR;
+    if (h.cool >= 0) {   // wait until the treat has left the hat it came out of
+      var ox = h.cool ? h.bx : h.ax, oy = h.cool ? h.by : h.ay;
+      if (dist2(c.x, c.y, ox, oy) > sq(P.hatR + 16)) h.cool = -1;
+      return;
+    }
+    var inA = dist2(c.x, c.y, h.ax, h.ay) < r2, inB = !inA && dist2(c.x, c.y, h.bx, h.by) < r2;
+    if (!inA && !inB) return;
+    var fx = inA ? h.ax : h.bx, fy = inA ? h.ay : h.by, tx = inA ? h.bx : h.ax, ty = inA ? h.by : h.ay;
+    var dx = tx - fx, dy = ty - fy;
+    c.x += dx; c.y += dy; c.px += dx; c.py += dy;
+    h.cool = inA ? 1 : 0;
+    while (this.ropes.length) this.cutRope(this.ropes[0], Math.floor((this.ropes[0].pts.length - 1) / 2), true);
+    this.events.push({ type: 'warp', i: i, x: fx, y: fy, x2: tx, y2: ty });
+  };
+
   World.prototype.win = function () {
     this.state = 'won';
     this.events.push({ type: 'win', x: this.candy.x, y: this.candy.y });
@@ -309,7 +346,7 @@
     return null;
   };
 
-  World.prototype.cutRope = function (r, k) {
+  World.prototype.cutRope = function (r, k, silent) {
     var idx = this.ropes.indexOf(r);
     if (idx < 0) return;
     this.held = false;
@@ -324,8 +361,8 @@
         this.pieces.push({ pts: tail, seg: r.seg, fade: 1, mv: null, follow: true });
       }
     }
-    this.events.push({ type: 'cut', id: r.id, x: (pts[k].x + pts[k + 1].x) / 2, y: (pts[k].y + pts[k + 1].y) / 2 });
-    this.log.push({ t: this.t, a: 'c' + r.id });
+    this.events.push({ type: silent ? 'snap' : 'cut', id: r.id, x: (pts[k].x + pts[k + 1].x) / 2, y: (pts[k].y + pts[k + 1].y) / 2 });
+    if (!silent) this.log.push({ t: this.t, a: 'c' + r.id });
   };
 
   World.prototype.pop = function () {
@@ -427,6 +464,8 @@
     w.hooks = this.hooks.map(function (h) { return { x: h.x, y: h.y, r: h.r, used: h.used }; });
     w.pads = this.pads.map(function (p) { return { x1: p.x1, y1: p.y1, x2: p.x2, y2: p.y2, last: p.last }; });
     w.spikes = this.spikes;
+    w.hats = this.hats.map(function (h) { return { ax: h.ax, ay: h.ay, bx: h.bx, by: h.by, cool: h.cool }; });
+    w.rotors = this.rotors;
     return w;
   };
 
@@ -450,5 +489,5 @@
     return { state: w.state, stars: w.got, t: w.t, reason: w.reason, world: w };
   }
 
-  return { W: W, H: H, DT: DT, P: P, World: World, run: run, parseSol: parseSol, segDist: segDist };
+  return { W: W, H: H, DT: DT, P: P, World: World, run: run, parseSol: parseSol, segDist: segDist, rotorEnds: rotorEnds };
 }));

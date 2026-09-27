@@ -16,7 +16,9 @@
     jelly: 'ゼリーに あたると ぽよーんと はねるよ',
     hook: 'ピンに ちかづくと ロープが くっつくよ',
     move: 'ピンが うごくよ。よく みて きってね',
-    spike: 'トゲトゲに さわると おやつが われちゃう！'
+    spike: 'トゲトゲに さわると おやつが われちゃう！',
+    warp: 'ぼうしに はいると、おなじ いろの ぼうしから でてくるよ',
+    rotor: 'くるくる まわる トゲに きをつけて。すきまを ねらってね'
   };
 
   // ---------------------------------------------------------------- save data
@@ -150,6 +152,10 @@
           break;
         case 'bounce': S.play('boing'); burst(this.fx, e.x, e.y + 10, 'dot', 5, '#ffc2e2'); break;
         case 'hook': S.play('hook'); ring(this.fx, e.x, e.y, '#fff3a0'); break;
+        case 'warp':
+          S.play('warp'); ring(this.fx, e.x, e.y, '#d9c7ff'); ring(this.fx, e.x2, e.y2, '#d9c7ff');
+          burst(this.fx, e.x2, e.y2, 'spark', 8, '#fff7b0'); break;
+        case 'snap': S.play('cut'); burst(this.fx, e.x, e.y, 'spark', 4, '#ffffff'); break;
         case 'win':
           this.eaten = { x: e.x, y: e.y, t: 0 };
           this.frog.mode = 'eat'; this.frog.mt = 0;
@@ -193,6 +199,8 @@
     for (i = 0; i < w.pieces.length; i++) if (w.pieces[i].mv) D.rail(c, w.pieces[i].mv);
     for (i = 0; i < w.hooks.length; i++) D.hook(c, w.hooks[i], t);
     for (i = 0; i < w.spikes.length; i++) D.spikes(c, w.spikes[i]);
+    for (i = 0; i < w.hats.length; i++) { D.hat(c, w.hats[i].ax, w.hats[i].ay, t, i); D.hat(c, w.hats[i].bx, w.hats[i].by, t + 0.5, i); }
+    for (i = 0; i < w.rotors.length; i++) D.rotor(c, E.rotorEnds(w.rotors[i], w.t), w.rotors[i].x, w.rotors[i].y);
     for (i = 0; i < w.pads.length; i++) D.jelly(c, w.pads[i], w.t);
     for (i = 0; i < w.bubbles.length; i++) if (w.bubbles[i].state === 0) D.bubble(c, w.bubbles[i].x, w.bubbles[i].y, P.bubbleR, t + i);
     for (i = 0; i < w.stars.length; i++) if (!w.stars[i].got) D.star(c, w.stars[i].x, w.stars[i].y, t, i, 1);
@@ -303,7 +311,15 @@
   // previous action.
 
   function makeHint(level) {
-    return { acts: E.parseSol(level.sol), idx: 0, base: 0, seen: 0 };
+    return { acts: E.parseSol(level.sol), idx: 0, base: 0, seen: 0, period: hintPeriod(level) };
+  }
+
+  // When the first cut only waits for one spinning spike bar (the treat is
+  // still), the right moment comes back every half turn, and so does the hint.
+  function hintPeriod(level) {
+    var movers = (level.ropes || []).some(function (r) { return r[3] != null; }), rotors = level.rotors || [];
+    if (rotors.length === 1 && !movers && !level.live) return 180 / Math.abs(rotors[0][3]);
+    return 0;
   }
 
   function updateHint(h, w) {
@@ -316,7 +332,9 @@
   function hintTarget(h, w) {
     if (h.idx >= h.acts.length || w.state !== 'play') return null;
     var a = h.acts[h.idx], prevT = h.idx ? h.acts[h.idx - 1].t : 0;
-    var due = h.base + (a.t - prevT), lead = due - w.t;
+    var due = h.base + (a.t - prevT);
+    if (h.idx === 0 && h.period) while (due < w.t - 0.35) due += h.period;
+    var lead = due - w.t;
     if (lead > 0.7) return null;
     var kind = a.a.charAt(0);
     if (kind === 'c') {
@@ -435,6 +453,7 @@
   function buildStages() {
     var wd = WORLDS[curWorld], grid = $('stage-grid');
     $('stages-title').textContent = wd.name;
+    $('stages-title').classList.toggle('long', wd.name.length > 9);
     grid.innerHTML = '';
     var nextSet = false;
     wd.stages.forEach(function (lv, si) {
@@ -699,6 +718,11 @@
       pts.push([(r[0] + lv.candy[0]) / 2, (r[1] + lv.candy[1]) / 2, 3]);
     });
     add(lv.bubbles, 2); add(lv.blowers, 2); add(lv.hooks, 2); add(lv.stars, 1);
+    (lv.hats || []).forEach(function (h) { pts.push([h[0], h[1], 2]); pts.push([h[2], h[3], 2]); });
+    (lv.rotors || []).forEach(function (r) {
+      for (var k = -1; k <= 1; k++) pts.push([r[0] + k * r[2] / 2, r[1], 2]);
+      pts.push([r[0], r[1] - r[2] / 2, 2]); pts.push([r[0], r[1] + r[2] / 2, 2]);
+    });
     (lv.pads || []).concat(lv.spikes || []).forEach(function (s) {
       for (var k = 0; k <= 4; k++) pts.push([s[0] + (s[2] - s[0]) * k / 4, s[1] + (s[3] - s[1]) * k / 4, 2]);
     });

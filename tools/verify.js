@@ -59,16 +59,25 @@ function inBounds(lv) {
   return pts.every(p => p[0] >= 10 && p[0] <= 350 && p[1] >= 60 && p[1] <= 625);
 }
 
-WORLDS.forEach((wd, wi) => {
+// Clear / 3-star timing slack of every action of a stage (tools/design/select.js uses it too).
+function slack(lv) {
+  const acts = E.parseSol(lv.sol);
+  const res = E.run(lv, acts, 15);
+  return {
+    acts, res,
+    wins: acts.map((a, i) => window(lv, acts, i, res.stars)),
+    clears: acts.map((a, i) => window(lv, acts, i, null))
+  };
+}
+module.exports = { slack };
+
+if (require.main === module) WORLDS.forEach((wd, wi) => {
   wd.stages.forEach((lv, si) => {
     const id = `${wi + 1}-${si + 1}`;
     if (filters.length && !filters.some(f => f === id || f === String(wi + 1))) return;
     total++;
-    const acts = E.parseSol(lv.sol);
-    const res = E.run(lv, acts, 15);
+    const { acts, res, wins, clears } = slack(lv);
     const idle = E.run(lv, [], 10);
-    const wins = acts.map((a, i) => window(lv, acts, i, res.stars));
-    const clears = acts.map((a, i) => window(lv, acts, i, null));
     const minW = wins.length ? Math.min(...wins.map(w => w[0] + w[1])) : 0;
     const minC = clears.length ? Math.min(...clears.map(w => w[0] + w[1])) : 0;
     const problems = [];
@@ -81,5 +90,7 @@ WORLDS.forEach((wd, wi) => {
     console.log(`${problems.length ? 'NG' : 'ok'} ${id.padEnd(5)} ★${res.stars} t=${res.t.toFixed(1)} 3★win=${minW.toFixed(2)}s clear=${minC.toFixed(2)}s  ${wtxt}${problems.length ? '  <-- ' + problems.join(', ') : ''}`);
   });
 });
-console.log(`\n${total - bad}/${total} stages OK`);
-process.exitCode = bad ? 1 : 0;
+if (require.main === module) {
+  console.log(`\n${total - bad}/${total} stages OK`);
+  process.exitCode = bad ? 1 : 0;
+}
