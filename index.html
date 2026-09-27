@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#9fdcff">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ケロちゃん もぐもぐ</title>
+<meta name="description" content="ロープを きって ケロちゃんに おやつを あげよう！">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="stage">
+  <section id="title" class="screen on">
+    <button id="btn-install" class="btn small install" hidden><span data-icon="install"></span>ホームに ついか</button>
+    <div class="top-row"><button id="btn-sfx" class="btn icon small" aria-label="こうかおん"></button><button id="btn-music" class="btn icon small" aria-label="おんがく"></button></div>
+    <h1 id="logo" class="logo">
+      <span class="l1"><b style="--d:0">ケ</b><b style="--d:1">ロ</b><b style="--d:2">ち</b><b style="--d:3">ゃ</b><b style="--d:4">ん</b></span>
+      <span class="l2"><b style="--d:5">も</b><b style="--d:6">ぐ</b><b style="--d:7">も</b><b style="--d:8">ぐ</b></span>
+    </h1>
+    <p class="sub">ロープを きって おやつを あげよう！</p>
+    <button id="btn-play" class="btn big play"><span data-icon="next"></span>あそぶ</button>
+  </section>
+
+  <section id="worlds" class="screen">
+    <header class="bar"><button id="worlds-back" class="btn icon" data-icon="back" aria-label="もどる"></button><h2>ワールドを えらぼう</h2></header>
+    <div id="world-list" class="world-list"></div>
+  </section>
+
+  <section id="stages" class="screen">
+    <header class="bar"><button id="stages-back" class="btn icon" data-icon="back" aria-label="もどる"></button><h2 id="stages-title"></h2></header>
+    <div id="stage-grid" class="stage-grid"></div>
+  </section>
+
+  <section id="hud" class="screen">
+    <button id="h-home" class="btn icon" data-icon="home" aria-label="ステージ"></button>
+    <div class="hud-mid"><div id="h-label"></div><div id="h-stars" class="hud-stars"><i></i><i></i><i></i></div></div>
+    <button id="h-hint" class="btn icon" data-icon="hint" aria-label="ヒント"></button>
+    <button id="h-retry" class="btn icon" data-icon="retry" aria-label="もういちど"></button>
+  </section>
+
+  <div id="tip" class="tip"></div>
+
+  <div id="clear" class="panel">
+    <div class="panel-card">
+      <div id="clear-title" class="clear-title"></div>
+      <div id="clear-stars" class="clear-stars"><i></i><i></i><i></i></div>
+      <div class="panel-row">
+        <button id="c-retry" class="btn icon" data-icon="retry" aria-label="もういちど"></button>
+        <button id="c-next" class="btn big"><span data-icon="next"></span>つぎへ</button>
+        <button id="c-menu" class="btn icon" data-icon="grid" aria-label="ステージ"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="parent" class="panel">
+    <div class="panel-card parent-card">
+      <div class="parent-title">保護者メニュー</div>
+      <button id="p-all" class="btn wide"></button>
+      <button id="p-reset" class="btn wide"></button>
+      <button id="p-close" class="btn wide">閉じる</button>
+    </div>
+  </div>
+</div>
+<script src="js/engine.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
