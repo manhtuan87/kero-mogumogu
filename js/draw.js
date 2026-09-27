@@ -6,7 +6,7 @@ var Draw = (function () {
   var INK = '#5a3825';
   var GREEN = '#86d65c', BELLY = '#e9f9cf', CHEEK = '#ff9db6';
 
-  function circle(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); }
+  function circle(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, TAU); }
   function ellipse(ctx, x, y, rx, ry, rot) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(0.01, rx), Math.max(0.01, ry), rot || 0, 0, TAU); }
   function paint(ctx, fill, stroke, lw) {
     if (fill) { ctx.fillStyle = fill; ctx.fill(); }
@@ -38,19 +38,21 @@ var Draw = (function () {
     }
   }
 
-  function eyeOpen(ctx, x, y, lx, ly) {
-    circle(ctx, x, y, 12.5); paint(ctx, '#fff', INK, 2.6);
-    var px = x + lx * 4.2, py = y + ly * 4.2;
-    circle(ctx, px, py, 6.8); paint(ctx, '#2e1d14');
-    circle(ctx, px - 2.3, py - 2.5, 2.5); paint(ctx, '#fff');
-    circle(ctx, px + 2.2, py + 2.2, 1.1); paint(ctx, '#fff');
+  function eyeOpen(ctx, x, y, lx, ly, k) {
+    k = k || 1;
+    circle(ctx, x, y, 12.5 * k); paint(ctx, '#fff', INK, 2.6);
+    var px = x + lx * 4.2 * k, py = y + ly * 4.2 * k;
+    circle(ctx, px, py, 6.8 * k); paint(ctx, '#2e1d14');
+    circle(ctx, px - 2.3 * k, py - 2.5 * k, 2.5 * k); paint(ctx, '#fff');
+    circle(ctx, px + 2.2 * k, py + 2.2 * k, 1.1 * k); paint(ctx, '#fff');
   }
 
-  function eyeClosed(ctx, x, y, happy) {
-    circle(ctx, x, y, 12.5); paint(ctx, GREEN);
+  function eyeClosed(ctx, x, y, happy, fill, k) {
+    k = k || 1;
+    circle(ctx, x, y, 12.5 * k + 0.5); paint(ctx, fill || GREEN);
     ctx.beginPath();
-    if (happy) { ctx.moveTo(x - 8, y + 3); ctx.quadraticCurveTo(x, y - 8, x + 8, y + 3); }
-    else { ctx.moveTo(x - 8, y - 1); ctx.quadraticCurveTo(x, y + 7, x + 8, y - 1); }
+    if (happy) { ctx.moveTo(x - 8 * k, y + 3 * k); ctx.quadraticCurveTo(x, y - 8 * k, x + 8 * k, y + 3 * k); }
+    else { ctx.moveTo(x - 8 * k, y - k); ctx.quadraticCurveTo(x, y + 7 * k, x + 8 * k, y - k); }
     ctx.lineCap = 'round'; paint(ctx, null, INK, 3);
   }
 
@@ -63,7 +65,6 @@ var Draw = (function () {
     ctx.restore();
   }
 
-  /* f = { x, y, t, look:{x,y}|null, open:0..1, mode:'idle'|'eat'|'happy'|'sad', mt, blink } */
   var PERCH = [[-54, 62, 15], [-28, 70, 20], [4, 73, 21], [36, 69, 19], [60, 61, 14], [-2, 60, 18]];
   function cloudPerch(ctx) {
     ctx.lineJoin = 'round';
@@ -72,24 +73,84 @@ var Draw = (function () {
     ellipse(ctx, -30, 64, 10, 4, -0.2); paint(ctx, 'rgba(200,225,255,.8)');
   }
 
-  function frog(ctx, f) {
+  // --- parts shared by every character (the mouth centre is the local origin)
+
+  // Seat (cloud perch + lily pad or cushion) and the bouncy body transform.
+  function pose(ctx, f, seat) {
     var t = f.t, mt = f.mt || 0, mode = f.mode || 'idle';
-    ctx.save();
     ctx.translate(f.x, f.y);
-    // slide the cloud and lily pad inward when the frog sits near a screen edge
+    // slide the seat inward when the character sits near a screen edge
     var shift = Math.max(0, 72 - f.x) - Math.max(0, f.x + 72 - 360);
     ctx.save(); ctx.translate(shift, 0);
     if (f.perch) cloudPerch(ctx);
     ctx.translate(-shift * 0.4, 0);
-    lilyPad(ctx);
+    seat(ctx);
     ctx.restore();
-    var hop = 0, sx = 1, sy = 1;
-    var breathe = Math.sin(t * 2.4) * 0.02;
+    var hop = 0, sx = 1, sy = 1, breathe = Math.sin(t * 2.4) * 0.02;
     if (mode === 'happy') hop = -Math.abs(Math.sin(mt * 6.5)) * 13;
     if (mode === 'eat' && mt < 1) { var w = Math.sin(mt * 24) * 0.06 * (1 - mt); sx += w; sy -= w; }
     sx += breathe * 0.5; sy -= breathe;
     ctx.translate(0, 46 + hop); ctx.scale(sx, sy); ctx.translate(0, -46);
+  }
 
+  // Eyes follow the treat; they close when blinking, happy or chewing.
+  function eyes(ctx, f, ex, ey, k, fills) {
+    var mode = f.mode || 'idle', mt = f.mt || 0, lx = 0, ly = 0.2;
+    if (mode === 'sad') { ly = 0.8; }
+    else if (f.look) {
+      var dx = f.look.x - f.x, dy = f.look.y - (f.y + ey), d = Math.sqrt(dx * dx + dy * dy) || 1;
+      lx = dx / d; ly = dy / d;
+    }
+    if (mode === 'happy' || (mode === 'eat' && mt > 0.25)) { eyeClosed(ctx, -ex, ey, true, fills[0], k); eyeClosed(ctx, ex, ey, true, fills[1], k); }
+    else if (f.blink) { eyeClosed(ctx, -ex, ey, false, fills[0], k); eyeClosed(ctx, ex, ey, false, fills[1], k); }
+    else { eyeOpen(ctx, -ex, ey, lx, ly, k); eyeOpen(ctx, ex, ey, lx, ly, k); }
+    if (mode === 'sad') {
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-ex - 8, ey - 18); ctx.lineTo(-ex + 6, ey - 14); paint(ctx, null, INK, 2.6);
+      ctx.beginPath(); ctx.moveTo(ex + 8, ey - 18); ctx.lineTo(ex - 6, ey - 14); paint(ctx, null, INK, 2.6);
+    }
+  }
+
+  function cheeks(ctx, f, cx, cy) {
+    var puffed = f.mode === 'eat' && (f.mt || 0) < 1.1;
+    ellipse(ctx, -cx, cy, puffed ? 11 : 8.5, puffed ? 7 : 5.5); paint(ctx, CHEEK);
+    ellipse(ctx, cx, cy, puffed ? 11 : 8.5, puffed ? 7 : 5.5); paint(ctx, CHEEK);
+  }
+
+  // Mouth while chewing / sad / happy / wide open; `idle` draws the resting mouth.
+  function mouth(ctx, f, y, idle) {
+    var mode = f.mode || 'idle', mt = f.mt || 0, o = f.open || 0;
+    ctx.lineCap = 'round';
+    if (mode === 'eat' && mt < 1.1) {
+      var chew = 0.5 + 0.5 * Math.sin(mt * 18);
+      ellipse(ctx, 0, y + 5, 7 + 3 * chew, 2 + 4 * chew); paint(ctx, '#b0304f', INK, 2.4);
+    } else if (mode === 'sad') {
+      ctx.beginPath(); ctx.moveTo(-10, y + 9); ctx.quadraticCurveTo(0, y, 10, y + 9); paint(ctx, null, INK, 3);
+    } else if (mode === 'happy') {
+      ctx.beginPath(); ctx.moveTo(-14, y); ctx.quadraticCurveTo(0, y + 20, 14, y); ctx.closePath();
+      paint(ctx, '#b0304f', INK, 2.6);
+      ctx.save(); ctx.clip(); ellipse(ctx, 0, y + 12, 9, 5); paint(ctx, '#ff7ea0'); ctx.restore();
+    } else if (o > 0.04) {
+      var rx = 7 + 15 * o, ry = 3 + 13 * o;
+      ellipse(ctx, 0, y + 6, rx, ry); paint(ctx, '#b0304f', INK, 2.6);
+      ctx.save(); ellipse(ctx, 0, y + 6, rx - 1, ry - 1); ctx.clip();
+      ellipse(ctx, 0, y + 6 + ry * 0.75, rx * 0.6, ry * 0.5); paint(ctx, '#ff7ea0');
+      ctx.restore();
+    } else idle();
+  }
+
+  function tears(ctx, f, ex) {
+    if (f.mode !== 'sad') return;
+    for (var s = -1; s <= 1; s += 2) {
+      var ty = f.y - 8 + (((f.mt || 0) * 40 + (s + 1) * 9) % 26);
+      teardrop(ctx, f.x + s * ex, ty, 4.5);
+    }
+  }
+
+  /* f = { x, y, t, look:{x,y}|null, open:0..1, mode:'idle'|'eat'|'happy'|'sad', mt, blink, perch, kind } */
+  function frog(ctx, f) {
+    ctx.save();
+    pose(ctx, f, lilyPad);
     // body silhouette: outline all parts first, then fill, so they merge
     var parts = [[0, 14, 45, 36], [-20, -20, 17, 17], [20, -20, 17, 17], [-28, 43, 15, 7], [28, 43, 15, 7]];
     ctx.lineJoin = 'round';
@@ -102,58 +163,116 @@ var Draw = (function () {
     // spots
     circle(ctx, -33, 2, 3.2); paint(ctx, 'rgba(70,160,50,.35)');
     circle(ctx, 36, 8, 2.4); paint(ctx, 'rgba(70,160,50,.35)');
-
-    // eyes
-    var lx = 0, ly = 0.2;
-    if (f.look) {
-      var dx = f.look.x - f.x, dy = f.look.y - (f.y - 22), d = Math.sqrt(dx * dx + dy * dy) || 1;
-      lx = dx / d; ly = dy / d;
-    }
-    if (mode === 'sad') { lx = 0; ly = 0.8; }
-    if (mode === 'happy' || (mode === 'eat' && mt > 0.25)) { eyeClosed(ctx, -20, -22, true); eyeClosed(ctx, 20, -22, true); }
-    else if (f.blink) { eyeClosed(ctx, -20, -22, false); eyeClosed(ctx, 20, -22, false); }
-    else { eyeOpen(ctx, -20, -22, lx, ly); eyeOpen(ctx, 20, -22, lx, ly); }
-    if (mode === 'sad') {
-      ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-28, -40); ctx.lineTo(-14, -36); paint(ctx, null, INK, 2.6);
-      ctx.beginPath(); ctx.moveTo(28, -40); ctx.lineTo(14, -36); paint(ctx, null, INK, 2.6);
-    }
+    eyes(ctx, f, 20, -22, 1, [GREEN, GREEN]);
     bow(ctx, 30, -38);
-
-    // cheeks
-    var puffed = mode === 'eat' && mt < 1.1;
-    ellipse(ctx, -31, 4, puffed ? 11 : 8.5, puffed ? 7 : 5.5); paint(ctx, CHEEK);
-    ellipse(ctx, 31, 4, puffed ? 11 : 8.5, puffed ? 7 : 5.5); paint(ctx, CHEEK);
-
-    // mouth
-    ctx.lineCap = 'round';
-    var o = f.open || 0;
-    if (mode === 'eat' && mt < 1.1) {
-      var chew = 0.5 + 0.5 * Math.sin(mt * 18);
-      ellipse(ctx, 0, 5, 7 + 3 * chew, 2 + 4 * chew); paint(ctx, '#b0304f', INK, 2.4);
-    } else if (mode === 'sad') {
-      ctx.beginPath(); ctx.moveTo(-10, 9); ctx.quadraticCurveTo(0, 0, 10, 9); paint(ctx, null, INK, 3);
-    } else if (mode === 'happy') {
-      ctx.beginPath(); ctx.moveTo(-14, 0); ctx.quadraticCurveTo(0, 20, 14, 0); ctx.closePath();
-      paint(ctx, '#b0304f', INK, 2.6);
-      ctx.save(); ctx.clip(); ellipse(ctx, 0, 12, 9, 5); paint(ctx, '#ff7ea0'); ctx.restore();
-    } else if (o > 0.04) {
-      var rx = 7 + 15 * o, ry = 3 + 13 * o;
-      ellipse(ctx, 0, 6, rx, ry); paint(ctx, '#b0304f', INK, 2.6);
-      ctx.save(); ellipse(ctx, 0, 6, rx - 1, ry - 1); ctx.clip();
-      ellipse(ctx, 0, 6 + ry * 0.75, rx * 0.6, ry * 0.5); paint(ctx, '#ff7ea0');
-      ctx.restore();
-    } else {
+    cheeks(ctx, f, 31, 4);
+    mouth(ctx, f, 0, function () {
       ctx.beginPath(); ctx.moveTo(-12, 1); ctx.quadraticCurveTo(0, 12, 12, 1); paint(ctx, null, INK, 3);
-    }
+    });
     ctx.restore();
+    tears(ctx, f, 22);
+  }
 
-    if (mode === 'sad') {    // tears
-      for (var s = -1; s <= 1; s += 2) {
-        var ty = f.y - 8 + ((mt * 40 + (s + 1) * 9) % 26);
-        teardrop(ctx, f.x + s * 22, ty, 4.5);
+  // --- friends from the shop: ミミちゃん (rabbit), ニャーちゃん (cat), ワンちゃん (dog)
+
+  var FRIENDS = {
+    rabbit: { body: '#fffaf6', belly: '#ffeef3', inner: '#ffb6ca', seat: '#ffc9dc', seat2: '#ff8fb8', nose: '#ff8fae' },
+    cat: { body: '#ffcf8f', belly: '#fff3dd', inner: '#ffb3a7', stripe: '#ec9a4a', seat: '#ddd0ff', seat2: '#a98bf0', nose: '#ff8fa3' },
+    dog: { body: '#f5d6ad', belly: '#fff6e9', ear: '#b88456', patch: '#e6b884', seat: '#c7e7ff', seat2: '#7cc0f0', nose: '#3a2618' }
+  };
+
+  function cushion(ctx, sp) {
+    ellipse(ctx, 0, 52, 64, 15); paint(ctx, sp.seat, INK, 3);
+    ellipse(ctx, -4, 48, 46, 7); paint(ctx, 'rgba(255,255,255,.45)');
+    circle(ctx, -62, 56, 4.5); paint(ctx, sp.seat2, INK, 2);
+    circle(ctx, 62, 56, 4.5); paint(ctx, sp.seat2, INK, 2);
+  }
+
+  function buddy(ctx, f, kind) {
+    var sp = FRIENDS[kind], t = f.t, mode = f.mode || 'idle', i, k;
+    var excited = mode === 'happy' || (f.open || 0) > 0.3;
+    ctx.save();
+    pose(ctx, f, function (c) { cushion(c, sp); });
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+    // tails peek out from behind
+    if (kind === 'cat') {
+      ctx.save(); ctx.translate(36, 40); ctx.rotate(Math.sin(t * 2.2) * 0.18);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(26, 2, 34, -22, 22, -40);
+      paint(ctx, null, INK, 14); paint(ctx, null, sp.body, 8.5);
+      ctx.beginPath(); ctx.moveTo(28, -28); ctx.quadraticCurveTo(27, -35, 22, -40);
+      paint(ctx, null, sp.stripe, 8.5);
+      ctx.restore();
+    } else if (kind === 'dog') {
+      ctx.save(); ctx.translate(38, 36); ctx.rotate(-0.5 + Math.sin(t * (excited ? 16 : 5)) * 0.35);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(18, -6, 20, -24);
+      paint(ctx, null, INK, 13); paint(ctx, null, sp.body, 7.5);
+      ctx.restore();
+    }
+    // ears behind the head
+    if (kind === 'rabbit') {
+      for (i = -1; i <= 1; i += 2) {
+        ctx.save(); ctx.translate(i * 15, -26); ctx.rotate(i * 0.16 + (i > 0 ? Math.sin(t * 1.6) * 0.06 : 0));
+        ellipse(ctx, 0, -30, 11.5, 31); paint(ctx, sp.body, INK, 3);
+        ellipse(ctx, 0, -27, 5.5, 21); paint(ctx, sp.inner);
+        ctx.restore();
+      }
+    } else if (kind === 'cat') {
+      for (i = -1; i <= 1; i += 2) {
+        ctx.beginPath(); ctx.moveTo(i * 12, -28); ctx.lineTo(i * 33, -60); ctx.lineTo(i * 44, -16); ctx.closePath();
+        paint(ctx, sp.body, INK, 3);
+        ctx.beginPath(); ctx.moveTo(i * 19, -28); ctx.lineTo(i * 32, -50); ctx.lineTo(i * 38, -24); ctx.closePath();
+        paint(ctx, sp.inner);
       }
     }
+    // round body: head and body in one, like a daifuku
+    ellipse(ctx, 0, 10, 46, 42); paint(ctx, sp.body, INK, 3.2);
+    ellipse(ctx, 0, 30, 28, 18); paint(ctx, sp.belly);
+    if (kind === 'cat') {
+      [[-7, -31, -5, -22], [0, -33, 0, -23], [7, -31, 5, -22]].forEach(function (l) {
+        ctx.beginPath(); ctx.moveTo(l[0], l[1]); ctx.lineTo(l[2], l[3]); paint(ctx, null, sp.stripe, 3.2);
+      });
+    }
+    if (kind === 'dog') { ellipse(ctx, 17, -11, 13, 11.5, 0.2); paint(ctx, sp.patch); }
+    // paws
+    ellipse(ctx, -30, 32, 8.5, 10, 0.3); paint(ctx, sp.body, INK, 2.4);
+    ellipse(ctx, 30, 32, 8.5, 10, -0.3); paint(ctx, sp.body, INK, 2.4);
+    // the dog's floppy ears hang in front
+    if (kind === 'dog') {
+      for (i = -1; i <= 1; i += 2) {
+        ctx.save(); ctx.translate(i * 38, -22); ctx.rotate(-i * 0.35 + i * Math.sin(t * 3) * 0.05);
+        ellipse(ctx, 0, 14, 11, 21); paint(ctx, sp.ear, INK, 3);
+        ctx.restore();
+      }
+    }
+    eyes(ctx, f, 17, -10, 0.85, [sp.body, kind === 'dog' ? sp.patch : sp.body]);
+    cheeks(ctx, f, 29, 7);
+    // nose
+    if (kind === 'dog') {
+      ellipse(ctx, 0, -1, 6.5, 5); paint(ctx, sp.nose);
+      ellipse(ctx, -2, -2.6, 2, 1.2); paint(ctx, 'rgba(255,255,255,.7)');
+    } else {
+      ctx.beginPath(); ctx.moveTo(-4.5, -3); ctx.lineTo(4.5, -3); ctx.lineTo(0, 2); ctx.closePath();
+      paint(ctx, sp.nose, INK, 1.6);
+    }
+    mouth(ctx, f, 4, function () {
+      ctx.beginPath(); ctx.moveTo(-9, 5); ctx.quadraticCurveTo(-4.5, 11, 0, 6); ctx.quadraticCurveTo(4.5, 11, 9, 5);
+      paint(ctx, null, INK, 2.6);
+      if (kind === 'dog') { ellipse(ctx, 0, 12, 4.5, 5.5); paint(ctx, '#ff7ea0', INK, 2); }
+    });
+    if (kind === 'cat') {
+      ctx.strokeStyle = 'rgba(90,56,37,.75)'; ctx.lineWidth = 1.6;
+      for (i = -1; i <= 1; i += 2) {
+        for (k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(i * 23, 4 + k * 4); ctx.lineTo(i * 43, 2 + k * 7); ctx.stroke(); }
+      }
+    }
+    ctx.restore();
+    tears(ctx, f, 17);
+  }
+
+  function critter(ctx, f) {
+    if (FRIENDS[f.kind]) buddy(ctx, f, f.kind);
+    else frog(ctx, f);
   }
 
   function teardrop(ctx, x, y, r) {
@@ -534,7 +653,7 @@ var Draw = (function () {
   return {
     INK: INK, THEMES: THEMES,
     circle: circle, ellipse: ellipse, paint: paint, roundRect: roundRect,
-    frog: frog, food: food, rope: rope, pin: pin, rail: rail, star: star, starPath: starPath,
+    frog: frog, critter: critter, food: food, rope: rope, pin: pin, rail: rail, star: star, starPath: starPath,
     bubble: bubble, blower: blower, hook: hook, jelly: jelly, spikes: spikes,
     heart: heart, sparkle: sparkle, hand: hand, background: background, teardrop: teardrop
   };

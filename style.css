@@ -70,7 +70,72 @@ button { pointer-events: auto; }
   padding: 7px 16px; font-size: 16px; font-weight: 800;
   background: rgba(255, 255, 255, .85); border: 3px solid var(--ink); border-radius: 999px;
 }
-#btn-play { position: absolute; left: 0; right: 0; top: 548px; margin: 0 auto; width: 230px; }
+#btn-play { position: absolute; left: 0; right: 0; top: 510px; margin: 0 auto; width: 230px; }
+.shop-btn {
+  position: absolute; left: 0; right: 0; top: 590px; margin: 0 auto; width: 200px; height: 44px;
+  font-size: 19px; background: linear-gradient(#fffbd6, #ffe27a);
+}
+.shop-btn svg { width: 24px; height: 24px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; padding: 2px 8px 2px 4px;
+  background: #fff; border: 2px solid var(--ink); border-radius: 999px; font-size: 15px;
+}
+.badge svg { width: 17px; height: 17px; color: var(--gold); }
+.badge svg path, .wallet svg path, .chara-btn svg path, .buy-text svg path { stroke: var(--ink); stroke-width: 1.6; }
+.admin { position: absolute; left: 10px; top: 596px; width: 36px !important; height: 36px !important; opacity: .55; box-shadow: 0 3px 0 var(--ink); }
+.admin svg { width: 20px !important; height: 20px !important; }
+
+/* ---------- shop ---------- */
+.wallet {
+  margin-left: auto; display: flex; align-items: center; gap: 4px;
+  background: rgba(255, 255, 255, .92); border: 3px solid var(--ink); border-radius: 999px;
+  padding: 6px 14px 6px 10px; font-size: 22px; font-weight: 800;
+}
+.wallet svg { width: 24px; height: 24px; color: var(--gold); }
+.shop-note {
+  position: absolute; left: 16px; right: 16px; top: 76px; margin: 0; padding: 6px 10px;
+  text-align: center; font-size: 16px; font-weight: 800;
+  background: rgba(255, 255, 255, .75); border-radius: 999px; transition: background .2s;
+}
+.shop-note.flash { background: #fff6b8; animation: pulse .6s ease-in-out 2; }
+.shop-grid {
+  position: absolute; left: 14px; right: 14px; top: 122px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.chara-card {
+  display: flex; flex-direction: column; align-items: center; padding: 4px 6px 12px;
+  background: rgba(255, 255, 255, .92); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 0 5px 0 var(--ink);
+  pointer-events: auto;
+}
+.chara-card.using { background: linear-gradient(#fffbd6, #ffe89a); }
+.chara-canvas { width: 132px; height: 132px; }
+.chara-name { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
+.chara-btn { height: 42px; font-size: 17px; padding: 0 14px; gap: 2px; }
+.chara-btn svg { width: 20px; height: 20px; color: var(--gold); }
+.chara-btn.buy { color: #fff; background: linear-gradient(#ffbddb, #ff78b0); text-shadow: 0 2px 0 rgba(90, 56, 37, .45); }
+.chara-btn.short { color: #8b7a6c; background: #e8dfd6; text-shadow: none; }
+.chara-btn.using { background: linear-gradient(#e2f9d3, #a9e38a); }
+
+.buy-card { display: flex; flex-direction: column; align-items: center; }
+.buy-canvas { width: 150px; height: 150px; }
+.buy-text { font-size: 22px; font-weight: 800; line-height: 1.5; margin: 0 0 14px; }
+.buy-text svg { width: 22px; height: 22px; color: var(--gold); vertical-align: -3px; }
+#buy-yes { height: 60px; font-size: 26px; padding: 0 26px; }
+
+/* ---------- admin ---------- */
+.pass-card { width: 290px; }
+.pass-dots { display: flex; justify-content: center; gap: 12px; margin: 10px 0 14px; }
+.pass-dots i { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; }
+.pass-dots i.on { background: var(--ink); }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.key {
+  height: 54px; font: 800 26px/1 var(--font); color: var(--ink); cursor: pointer;
+  border: 3px solid var(--ink); border-radius: 16px; background: linear-gradient(#fff 55%, #f1ece6); box-shadow: 0 4px 0 var(--ink);
+}
+.key:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.key.small { font-size: 17px; }
+.key.ok { background: linear-gradient(#e2f9d3, #a9e38a); }
+.parent-info { font-size: 15px; font-weight: 800; opacity: .75; }
 
 /* ---------- world / stage select ---------- */
 .bar { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 10px; padding: 12px 14px 0; }

@@ -23,11 +23,14 @@
 
   var SAVE_KEY = 'kero-mogumogu-v1';
   var save = (function () {
-    try {
-      var s = JSON.parse(localStorage.getItem(SAVE_KEY));
-      if (s && s.stars) { s.seen = s.seen || {}; return s; }
-    } catch (e) { /* no storage */ }
-    return { stars: {}, sfx: true, music: true, all: false, seen: {} };
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { /* no storage */ }
+    if (!s || !s.stars) s = { stars: {}, sfx: true, music: true, all: false };
+    s.seen = s.seen || {};
+    s.spent = s.spent || 0;            // ★ spent in the shop
+    s.owned = s.owned || ['frog'];     // characters bought
+    s.chara = s.chara || 'frog';       // character in use
+    return s;
   }());
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
   function skey(wi, si) { return wi + '-' + si; }
@@ -41,6 +44,19 @@
     return n;
   }
   function foodOf(wi, si) { var f = WORLDS[wi].food; return f === 'mix' ? FOODS[si % 4] : f; }
+
+  // Characters that eat the treats. Stars earned in stages are the shop money;
+  // buying spends from the wallet but never changes a stage's star record.
+  var CHARAS = [
+    { id: 'frog', name: 'ケロちゃん', price: 0 },
+    { id: 'rabbit', name: 'ミミちゃん', price: 10 },
+    { id: 'cat', name: 'ニャーちゃん', price: 20 },
+    { id: 'dog', name: 'ワンちゃん', price: 30 }
+  ];
+  function charaById(id) { for (var i = 0; i < CHARAS.length; i++) if (CHARAS[i].id === id) return CHARAS[i]; return CHARAS[0]; }
+  function owns(id) { return save.owned.indexOf(id) >= 0; }
+  function totalStars() { var n = 0; for (var k in save.stars) n += save.stars[k] || 0; return n; }
+  function wallet() { return Math.max(0, totalStars() - save.spent); }
 
   if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) { /* ignore */ } }
 
@@ -79,10 +95,11 @@
 
   // ---------------------------------------------------------------- scene (a level being played)
 
+  function noop() {}
   function Scene(level, food, onEvent) {
     this.level = level;
     this.food = food;
-    this.onEvent = onEvent || function () {};
+    this.onEvent = onEvent || noop;
     this.world = new E.World(level);
     this.frog = { mode: 'idle', mt: 0, open: 0, blinkT: 1.5 + Math.random() * 2, blink: false, wasOpen: false };
     this.fx = [];
@@ -118,7 +135,7 @@
       var e = evs[i];
       switch (e.type) {
         case 'cut':
-          S.play('cut'); burst(this.fx, e.x, e.y, 'spark', 6, '#ffffff'); vibrate(12); break;
+          S.play('cut'); burst(this.fx, e.x, e.y, 'spark', 6, '#ffffff'); if (this.onEvent !== noop) vibrate(12); break;
         case 'star':
           S.play('star', e.n); burst(this.fx, e.x, e.y, 'spark', 12, '#fff27a'); ring(this.fx, e.x, e.y, '#ffe45c'); break;
         case 'bubble': S.play('bubble'); break;
@@ -136,11 +153,11 @@
         case 'win':
           this.eaten = { x: e.x, y: e.y, t: 0 };
           this.frog.mode = 'eat'; this.frog.mt = 0;
-          S.play('eat'); S.play('win'); vibrate(30);
+          S.play('eat'); S.play('win'); if (this.onEvent !== noop) vibrate(30);
           break;
         case 'lose':
           this.frog.mode = 'sad'; this.frog.mt = 0;
-          if (e.reason === 'spike') { S.play('spike'); burst(this.fx, e.x, e.y, 'crumb', 14, crumbColor(this.food)); vibrate(60); }
+          if (e.reason === 'spike') { S.play('spike'); burst(this.fx, e.x, e.y, 'crumb', 14, crumbColor(this.food)); if (this.onEvent !== noop) vibrate(60); }
           else S.play('lose');
           break;
       }
@@ -183,7 +200,7 @@
 
     var look = w.state === 'play' || w.state === 'lost' ? w.candy : null;
     var f = this.frog;
-    D.frog(c, { x: w.frog.x, y: w.frog.y, t: t, look: look, open: f.open, mode: f.mode, mt: f.mt, blink: f.blink, perch: w.frog.y < 530 });
+    D.critter(c, { x: w.frog.x, y: w.frog.y, t: t, look: look, open: f.open, mode: f.mode, mt: f.mt, blink: f.blink, perch: w.frog.y < 530, kind: save.chara });
 
     for (i = 0; i < w.pieces.length; i++) D.rope(c, w.pieces[i].pts, w.pieces[i].fade);
     for (i = 0; i < w.ropes.length; i++) D.rope(c, w.ropes[i].pts, 1);
@@ -200,7 +217,7 @@
       var k = Math.min(1, this.eaten.t / 0.22), ex = this.eaten.x + (w.frog.x - this.eaten.x) * k, ey = this.eaten.y + (w.frog.y + 4 - this.eaten.y) * k;
       if (k < 1) D.food(c, this.food, ex, ey, P.candyR * (1 - k * 0.7), cd.angle);
     } else if (!(w.state === 'lost' && w.reason === 'spike')) {
-      D.food(c, this.food, cd.x, cd.y, P.candyR * sc, cd.angle);
+      if (sc > 0.1) D.food(c, this.food, cd.x, cd.y, P.candyR * sc, cd.angle);
       if (cd.bubble >= 0) D.bubble(c, cd.x, cd.y, P.bubbleR + 2, t);
     }
 
@@ -341,7 +358,7 @@
 
   function show(name) {
     screen = name;
-    ['title', 'worlds', 'stages', 'hud'].forEach(function (id) {
+    ['title', 'worlds', 'stages', 'shop', 'hud'].forEach(function (id) {
       $(id).classList.toggle('on', id === name || (name === 'play' && id === 'hud'));
     });
     if (name !== 'play') { hidePanel('clear'); hideTip(); releaseWake(); }
@@ -351,13 +368,14 @@
   var depth = 0;
   function forward(fn) { depth++; history.pushState({ d: depth }, ''); fn(); }
   function go(name) {
-    if (name === 'title') { show('title'); newDemo(); }
+    if (name === 'title') { show('title'); newDemo(); refreshShopBadge(); }
     else if (name === 'worlds') { buildWorlds(); show('worlds'); }
     else if (name === 'stages') { buildStages(); show('stages'); }
+    else if (name === 'shop') { buildShop(); show('shop'); }
   }
   window.addEventListener('popstate', function () {
     depth = Math.max(0, depth - 1);
-    hidePanel('parent');
+    ['parent', 'pass', 'buy'].forEach(hidePanel);
     if (screen === 'play') go('stages');
     else if (screen === 'stages') go('worlds');
     else go('title');
@@ -368,7 +386,7 @@
 
   // --- title
 
-  var DEMO_LEVEL = { candy: [180, 345], frog: [180, 470], ropes: [[180, 268]], sol: 'c0@2.2' };
+  var DEMO_LEVEL = { candy: [180, 322], frog: [180, 438], ropes: [[180, 254]], sol: 'c0@2.2' };
   function newDemo() {
     demo = new Scene(DEMO_LEVEL, FOODS[Math.floor(Math.random() * 4)]);
     demo.hint = makeHint(DEMO_LEVEL);
@@ -437,6 +455,127 @@
   }
 
   function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+  // --- shop: buy friends with ★ and choose who eats the treats
+
+  var SHOP_NOTE = '★を つかって おともだちを ふやそう！';
+  var shop = { t: 0, cards: [], fx: [] };
+
+  function drawPreview(cv, kind, t, extra) {
+    var g = cv.getContext('2d'), k = cv.width / 240 * 1.05;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cv.width, cv.height);
+    g.setTransform(k, 0, 0, k, cv.width / 2 - 180 * k, cv.height * 0.6 - 150 * k);
+    D.critter(g, Object.assign({ x: 180, y: 150, t: t, kind: kind, look: null, blink: (t % 3.3) < 0.13, mode: 'idle' }, extra || {}));
+  }
+
+  function refreshShopBadge() { $('shop-badge').innerHTML = icon('star') + wallet(); }
+
+  function buildShop() {
+    var grid = $('shop-grid');
+    grid.innerHTML = '';
+    shop.cards = [];
+    $('shop-wallet').innerHTML = icon('star') + '<span>' + wallet() + '</span>';
+    CHARAS.forEach(function (ch) {
+      var mine = owns(ch.id), using = save.chara === ch.id, card = document.createElement('div');
+      card.className = 'chara-card' + (using ? ' using' : '');
+      var cv = document.createElement('canvas');
+      cv.width = 240; cv.height = 240; cv.className = 'chara-canvas';
+      card.appendChild(cv);
+      var nm = document.createElement('div');
+      nm.className = 'chara-name'; nm.textContent = ch.name;
+      card.appendChild(nm);
+      var b = document.createElement('button');
+      if (using) { b.className = 'btn chara-btn using'; b.textContent = 'つかってる'; }
+      else if (mine) { b.className = 'btn chara-btn'; b.textContent = 'えらぶ'; }
+      else {
+        var can = wallet() >= ch.price;
+        b.className = 'btn chara-btn buy' + (can ? '' : ' short');
+        b.innerHTML = icon('star') + ch.price + (can ? ' で かう' : '');
+      }
+      b.addEventListener('click', function () { choose(ch, card); });
+      card.appendChild(b);
+      grid.appendChild(card);
+      shop.cards.push({ id: ch.id, canvas: cv, happyT: -9 });
+    });
+  }
+
+  function choose(ch, card) {
+    if (save.chara === ch.id) { S.play('click'); cheer(ch.id); return; }
+    if (owns(ch.id)) { S.play('click'); save.chara = ch.id; store(); buildShop(); cheer(ch.id); return; }
+    if (wallet() < ch.price) {
+      S.play('lose'); shake(card);
+      showShopNote('あと ★' + (ch.price - wallet()) + ' で かえるよ');
+      return;
+    }
+    S.play('click');
+    buying = ch;
+    $('buy-text').innerHTML = ch.name + 'を<br>' + icon('star') + ch.price + ' で かう？';
+    showPanel('buy');
+  }
+
+  var buying = null;
+  function confirmBuy() {
+    var ch = buying;
+    hidePanel('buy'); buying = null;
+    if (!ch || owns(ch.id) || wallet() < ch.price) return;
+    save.spent += ch.price;
+    save.owned.push(ch.id);
+    save.chara = ch.id;
+    store();
+    S.play('fanfare'); vibrate(40);
+    buildShop(); cheer(ch.id);
+    for (var i = 0; i < 60; i++) {
+      shop.fx.push({ kind: 'confetti', x: Math.random() * W, y: -20 - Math.random() * 160, vx: (Math.random() - 0.5) * 80, vy: 40 + Math.random() * 60, life: 2.6, max: 2.6, size: 4 + Math.random() * 3, rot: Math.random() * 6, color: ['#ff7fb5', '#ffd93d', '#7fd3ff', '#8ff08f', '#c79cff'][i % 5] });
+    }
+    showShopNote(ch.name + 'が なかまに なったよ！');
+  }
+
+  function cheer(id) { shop.cards.forEach(function (c) { if (c.id === id) c.happyT = shop.t; }); }
+
+  function updateShop(dt) {
+    shop.t += dt;
+    shop.cards.forEach(function (c, i) {
+      var since = shop.t - c.happyT;
+      drawPreview(c.canvas, c.id, shop.t + i * 0.9, since < 1.4 ? { mode: 'happy', mt: since } : null);
+    });
+    if (buying) drawPreview($('buy-canvas'), buying.id, shop.t);
+    updateFx(shop.fx, dt);
+  }
+
+  var noteTimer = null;
+  function showShopNote(text) {
+    var el = $('shop-note');
+    el.textContent = text;
+    el.classList.add('flash');
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () { el.textContent = SHOP_NOTE; el.classList.remove('flash'); }, 2600);
+  }
+
+  // --- grown-ups: the password opens the admin menu (unlock every stage, reset)
+
+  var ADMIN_PASS = '123', typed = '';
+  function openPass() { typed = ''; drawDots(); showPanel('pass'); }
+  function drawDots() {
+    var h = '';
+    for (var i = 0; i < Math.max(3, typed.length); i++) h += '<i class="' + (i < typed.length ? 'on' : '') + '"></i>';
+    $('pass-dots').innerHTML = h;
+  }
+  function pressKey(k) {
+    if (k === 'del') typed = typed.slice(0, -1);
+    else if (k === 'ok') {
+      if (typed === ADMIN_PASS) { hidePanel('pass'); S.play('click'); openAdmin(); return; }
+      S.play('lose'); shake($('pass-card')); typed = '';
+    } else if (typed.length < 6) { typed += k; S.play('click'); }
+    drawDots();
+  }
+  function openAdmin() {
+    $('p-all').textContent = save.all ? '全ステージ解放：オン' : '全ステージ解放：オフ';
+    $('p-all').classList.toggle('active', !!save.all);
+    $('p-reset').textContent = '記録をリセット';
+    $('p-info').textContent = 'あつめた★ ' + totalStars() + '　つかった★ ' + save.spent;
+    showPanel('parent');
+  }
 
   // --- playing
 
@@ -671,7 +810,9 @@
     musicOff: '<path d="M9 17.5V6.5l10-2v11"/><circle cx="6.8" cy="17.5" r="2.4" fill="currentColor"/><circle cx="16.8" cy="15.5" r="2.4" fill="currentColor"/><path d="M4 4l16 16"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5"/>',
     star: '<path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z" fill="currentColor" stroke-linejoin="round"/>',
-    install: '<path d="M12 4v10M7.5 9.5 12 14l4.5-4.5M5 19h14"/>'
+    install: '<path d="M12 4v10M7.5 9.5 12 14l4.5-4.5M5 19h14"/>',
+    shop: '<path d="M5.5 8.5h13l-1.2 11.5H6.7z" fill="currentColor" fill-opacity=".25"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
+    gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M21 12h-2.4M5.4 12H3M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7M18.4 18.4l-1.7-1.7M7.3 7.3 5.6 5.6"/>'
   };
   function icon(name) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + '</svg>';
@@ -690,6 +831,7 @@
   function wire() {
     document.querySelectorAll('[data-icon]').forEach(function (el) { setIcon(el, el.getAttribute('data-icon')); });
     document.querySelectorAll('#h-stars i, #clear-stars i').forEach(function (el) { el.innerHTML = icon('star'); });
+    refreshShopBadge();
     refreshToggles();
     S.set('sfx', save.sfx); S.set('music', save.music);
 
@@ -709,22 +851,27 @@
     $('c-menu').addEventListener('click', function () { hidePanel('clear'); back(); });
     $('tip').addEventListener('click', hideTip);
 
-    // grown-ups: press and hold the title for 2 seconds
-    var holdTimer = null;
-    $('logo').addEventListener('pointerdown', function () { holdTimer = setTimeout(openParent, 2000); });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { $('logo').addEventListener(ev, function () { clearTimeout(holdTimer); }); });
-    $('p-all').addEventListener('click', function () { save.all = !save.all; store(); openParent(); });
+    // shop
+    $('btn-shop').addEventListener('click', function () { S.play('click'); forward(function () { go('shop'); }); });
+    $('shop-back').addEventListener('click', back);
+    $('buy-yes').addEventListener('click', confirmBuy);
+    $('buy-no').addEventListener('click', function () { S.play('click'); buying = null; hidePanel('buy'); });
+
+    // grown-ups: ⚙ -> password -> admin menu
+    $('btn-admin').addEventListener('click', function () { S.play('click'); openPass(); });
+    document.querySelectorAll('#pass .key').forEach(function (k) {
+      k.addEventListener('click', function () { pressKey(k.getAttribute('data-k')); });
+    });
+    $('pass-close').addEventListener('click', function () { hidePanel('pass'); });
+    $('p-all').addEventListener('click', function () { save.all = !save.all; store(); openAdmin(); });
     var resetArmed = false;
     $('p-reset').addEventListener('click', function () {
       if (!resetArmed) { resetArmed = true; $('p-reset').textContent = 'もう一度押すと消えます'; return; }
-      save.stars = {}; save.seen = {}; save.all = false; store(); resetArmed = false; openParent();
+      save.stars = {}; save.seen = {}; save.all = false;
+      save.spent = 0; save.owned = ['frog']; save.chara = 'frog';
+      store(); resetArmed = false; openAdmin(); refreshShopBadge();
     });
     $('p-close').addEventListener('click', function () { resetArmed = false; hidePanel('parent'); });
-    function openParent() {
-      $('p-all').textContent = save.all ? '全ステージ解放：オン' : '全ステージ解放：オフ';
-      $('p-reset').textContent = '記録をリセット';
-      showPanel('parent');
-    }
 
     // "add to home screen" when the browser offers it
     var installEvt = null;
@@ -752,6 +899,11 @@
       updateDemo(dt);
       drawBackground(0);
       demo.draw(ctx, demo.hint);
+    } else if (screen === 'shop') {
+      updateShop(dt);
+      drawBackground(1);
+      worldTransform(ctx);
+      drawFx(ctx, shop.fx);
     } else {
       drawBackground(screen === 'stages' ? WORLDS[curWorld].theme : 0);
     }

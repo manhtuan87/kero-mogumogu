@@ -27,6 +27,14 @@
     </h1>
     <p class="sub">ロープを きって おやつを あげよう！</p>
     <button id="btn-play" class="btn big play"><span data-icon="next"></span>あそぶ</button>
+    <button id="btn-shop" class="btn shop-btn"><span data-icon="shop"></span>おみせ<span id="shop-badge" class="badge"></span></button>
+    <button id="btn-admin" class="btn icon small admin" data-icon="gear" aria-label="管理者メニュー"></button>
+  </section>
+
+  <section id="shop" class="screen">
+    <header class="bar"><button id="shop-back" class="btn icon" data-icon="back" aria-label="もどる"></button><h2>おみせ</h2><div id="shop-wallet" class="wallet"></div></header>
+    <p id="shop-note" class="shop-note">★を つかって おともだちを ふやそう！</p>
+    <div id="shop-grid" class="shop-grid"></div>
   </section>
 
   <section id="worlds" class="screen">
@@ -60,9 +68,35 @@
     </div>
   </div>
 
+  <div id="buy" class="panel">
+    <div class="panel-card buy-card">
+      <canvas id="buy-canvas" class="buy-canvas" width="240" height="240"></canvas>
+      <div id="buy-text" class="buy-text"></div>
+      <div class="panel-row">
+        <button id="buy-no" class="btn">やめる</button>
+        <button id="buy-yes" class="btn big">かう</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pass" class="panel">
+    <div id="pass-card" class="panel-card pass-card">
+      <div class="parent-title">管理者パスワード</div>
+      <div id="pass-dots" class="pass-dots"></div>
+      <div class="keypad">
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key small" data-k="del">けす</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">OK</button>
+      </div>
+      <button id="pass-close" class="btn wide">閉じる</button>
+    </div>
+  </div>
+
   <div id="parent" class="panel">
     <div class="panel-card parent-card">
-      <div class="parent-title">保護者メニュー</div>
+      <div class="parent-title">管理者メニュー</div>
+      <div id="p-info" class="parent-info"></div>
       <button id="p-all" class="btn wide"></button>
       <button id="p-reset" class="btn wide"></button>
       <button id="p-close" class="btn wide">閉じる</button>

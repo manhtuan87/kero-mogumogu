@@ -2,7 +2,7 @@
    Keeps the game on the device so it plays without a connection.
    Bump VERSION whenever the game files change; the new files are fetched
    in the background and used from the next launch. */
-var VERSION = 'kero-v1';
+var VERSION = 'kero-v2';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
