@@ -385,8 +385,22 @@
   // Android back button walks back through the screens.
   var depth = 0;
   function forward(fn) { depth++; history.pushState({ d: depth }, ''); fn(); }
+  // The nickname set in ケロちゃん ランド (every game on the site reads the same key), shown on the title screen.
+  function refreshNameTag() {
+    var n = '', el = $('name-tag');
+    try { n = (localStorage.getItem('kero-name') || '').trim().slice(0, 10); } catch (e) { /* no storage */ }
+    el.hidden = !n;
+    el.innerHTML = '';
+    if (!n) return;
+    el.innerHTML = icon('star');
+    var sp = document.createElement('span');
+    sp.textContent = n;
+    el.appendChild(sp);
+  }
+  window.addEventListener('pageshow', function () { refreshNameTag(); });
+
   function go(name) {
-    if (name === 'title') { show('title'); newDemo(); refreshShopBadge(); }
+    if (name === 'title') { show('title'); refreshNameTag(); newDemo(); refreshShopBadge(); }
     else if (name === 'worlds') { buildWorlds(); show('worlds'); }
     else if (name === 'stages') { buildStages(); show('stages'); }
     else if (name === 'shop') { buildShop(); show('shop'); }

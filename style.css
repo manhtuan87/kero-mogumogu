@@ -250,3 +250,14 @@ button { pointer-events: auto; }
 @keyframes popin { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 .shake { animation: shake .25s 2; }
+
+/* ---------- the nickname from ケロちゃん ランド ---------- */
+.name-tag {
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  max-width: 150px; height: 38px; padding: 0 12px 0 8px; display: flex; align-items: center; gap: 4px;
+  font-size: 16px; font-weight: 800; white-space: nowrap; overflow: hidden; pointer-events: none;
+  background: rgba(255, 255, 255, .92); border: 3px solid var(--ink); border-radius: 999px;
+}
+.name-tag svg { width: 18px; height: 18px; flex: none; color: #ffc21a; }
+.name-tag svg path { stroke: var(--ink); stroke-width: 1.6; }
+.name-tag span { overflow: hidden; text-overflow: ellipsis; }

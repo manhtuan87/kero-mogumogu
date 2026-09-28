@@ -4,7 +4,7 @@
    in the background and used from the next launch.
    Other games on the same site (ケロちゃん ぴよぴよポン) share the cache storage,
    so only caches whose names start with "kero-" are ever deleted here. */
-var VERSION = 'kero-v4';
+var VERSION = 'kero-v5';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
