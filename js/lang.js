@@ -10,10 +10,10 @@ var Lang = (function () {
   var LIST = [
     { id: 'ja', name: '日本語' },
     { id: 'vi', name: 'Tiếng Việt' },
-    { id: 'en', name: 'English' },
-    { id: 'ko', name: '한국어' }
+    { id: 'en', name: 'English' }
+    // { id: 'ko', name: '한국어' }   // Korean is switched off for now (2026-09-29); its translations stay in the tables
   ];
-  var KEY = 'kero-lang', IDX = { vi: 0, en: 1, ko: 2 };
+  var KEY = 'kero-lang', IDX = { vi: 0, en: 1 /* , ko: 2 */ };   // (a phone that had chosen Korean shows Japanese)
   var JA = /[぀-ヿ㐀-鿿！-～]/;   // kana, kanji, full-width marks
   function read() {
     try { var v = localStorage.getItem(KEY); return IDX[v] != null ? v : 'ja'; } catch (e) { return 'ja'; }
