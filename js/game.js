@@ -80,6 +80,7 @@
   function worldTransform(c) { c.setTransform(view.dpr * view.s, 0, 0, view.dpr * view.s, view.dpr * view.ox, view.dpr * view.oy); }
 
   function drawBackground(theme) {
+    if (!(view.s > 0)) return;   // (a window with no size yet)
     if (!bg.canvas || bg.theme !== theme) {
       bg.canvas = document.createElement('canvas');
       bg.canvas.width = canvas.width; bg.canvas.height = canvas.height;
@@ -970,8 +971,22 @@
   go('title');
   requestAnimationFrame(frame);
 
+  // Offline play and updates. sw.js keeps the game on the phone. A new version is looked for whenever
+  // the game is opened or comes back to the front; once it is stored (the new sw.js takes over at once),
+  // the page reloads itself as soon as the title screen is showing, so the phone never keeps an old version.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    var swReg = null, swHad = !!navigator.serviceWorker.controller, swNew = false;
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (r) { swReg = r; }).catch(function () {});
+    var swCheck = function () { if (swReg && !document.hidden) swReg.update().catch(function () {}); };
+    document.addEventListener('visibilitychange', swCheck);
+    window.addEventListener('pageshow', function (e) { if (e.persisted) swCheck(); });
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (swHad) swNew = true;   // (not the first time the game is stored)
+      swHad = true;
+    });
+    setInterval(function () {
+      if (swNew && !document.hidden && screen === 'title' && depth === 0 && !document.querySelector('.panel.on')) { swNew = false; location.reload(); }
+    }, 700);
   }
 
   // for playtesting from the browser console

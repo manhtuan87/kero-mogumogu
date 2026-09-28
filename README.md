@@ -46,4 +46,4 @@ python -m http.server 8765 --directory .
 - ワールド6〜15は `tools/design/gen.js` で候補を自動生成し、`tools/design/select.js` で12個ずつ選んでいます（`tools/design/preview.html?file=out/w6.jsonl` で候補を一覧表示）
 - `node tools/verify.js` … 全ステージを自動プレイして、星3つでクリアできるか・タイミングの余裕を確認
 - `node tools/solve.js 2-5` … ステージの解き方を探す
-- 更新を配信するときは `sw.js` の `VERSION` を上げてください（次回起動時に新しい版に切り替わります）
+- 更新を配信するときは `sw.js` の `VERSION` を上げてください（アプリを開いたとき・アプリに戻ったときに新しい版を探し、見つかったら サーバーから直接 取り直して、タイトル画面で自動的に読み込み直します）

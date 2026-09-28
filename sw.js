@@ -1,10 +1,12 @@
 /* ケロちゃん もぐもぐ — offline support.
    Keeps the game on the device so it plays without a connection.
-   Bump VERSION whenever the game files change; the new files are fetched
-   in the background and used from the next launch.
+   Bump VERSION whenever the game files change. The page looks for a new version
+   whenever it is opened or comes back to the front; the new files are fetched
+   straight from the server (never from the browser's own cache), this worker takes
+   over at once, and the page reloads itself on the title screen.
    Other games on the same site (ケロちゃん ぴよぴよポン) share the cache storage,
    so only caches whose names start with "kero-" are ever deleted here. */
-var VERSION = 'kero-v5';
+var VERSION = 'kero-v6';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
@@ -12,9 +14,13 @@ var FILES = [
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
 
+// A file straight from the server, not from the browser's own cache (GitHub Pages lets browsers
+// keep files for 10 minutes, which could otherwise put old files into a new version).
+function fresh(f) { return new Request(f, { cache: 'reload' }); }
+
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION)
-    .then(function (c) { return c.addAll(FILES); })
+    .then(function (c) { return c.addAll(FILES.map(fresh)); })
     .then(function () { return self.skipWaiting(); }));
 });
 
@@ -34,7 +40,7 @@ self.addEventListener('fetch', function (e) {
   if (url.origin === self.location.origin) {
     e.respondWith(caches.open(VERSION).then(function (c) {
       return c.match(req, { ignoreSearch: true }).then(function (hit) {
-        var net = fetch(req).then(function (res) {
+        var net = fetch(req.url, { cache: 'no-cache' }).then(function (res) {
           if (res.ok) c.put(req, res.clone());
           return res;
         }).catch(function () { return hit; });
