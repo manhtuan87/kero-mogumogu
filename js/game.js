@@ -466,7 +466,7 @@
       } else D.food(g, wd.food, 32, 33, 17, -0.25);
       b.appendChild(ic);
       var tx = document.createElement('div'); tx.className = 'card-text';
-      tx.innerHTML = '<div class="card-num">ワールド ' + (wi + 1) + '</div><div class="card-name">' + wd.name + '</div>' +
+      tx.innerHTML = '<div class="card-num">' + L('ワールド {n}', { n: wi + 1 }) + '</div><div class="card-name">' + L(wd.name) + '</div>' +
         '<div class="card-stars">' + icon('star') + ' ' + worldStars(wi) + ' / ' + wd.stages.length * 3 + '</div>';
       b.appendChild(tx);
       if (!open) { var lk = document.createElement('span'); lk.className = 'card-lock'; lk.innerHTML = icon('lock'); b.appendChild(lk); }
@@ -482,8 +482,9 @@
 
   function buildStages() {
     var wd = WORLDS[curWorld], grid = $('stage-grid');
-    $('stages-title').textContent = wd.name;
-    $('stages-title').classList.toggle('long', wd.name.length > 9);
+    var wname = L(wd.name);
+    $('stages-title').textContent = wname;
+    $('stages-title').classList.toggle('long', wname.length > (Lang.cur === 'ja' ? 9 : 16));
     grid.innerHTML = '';
     var nextSet = false;
     wd.stages.forEach(function (lv, si) {
@@ -507,7 +508,7 @@
 
   // --- shop: buy friends with ★ and choose who eats the treats
 
-  var SHOP_NOTE = '★を つかって おともだちを ふやそう！';
+  var SHOP_NOTE = L('★を つかって おともだちを ふやそう！');
   var shop = { t: 0, cards: [], fx: [] };
 
   function drawPreview(cv, kind, t, extra) {
@@ -532,15 +533,15 @@
       cv.width = 240; cv.height = 240; cv.className = 'chara-canvas';
       card.appendChild(cv);
       var nm = document.createElement('div');
-      nm.className = 'chara-name'; nm.textContent = ch.name;
+      nm.className = 'chara-name'; nm.textContent = L(ch.name);
       card.appendChild(nm);
       var b = document.createElement('button');
-      if (using) { b.className = 'btn chara-btn using'; b.textContent = 'つかってる'; }
-      else if (mine) { b.className = 'btn chara-btn'; b.textContent = 'えらぶ'; }
+      if (using) { b.className = 'btn chara-btn using'; b.textContent = L('つかってる'); }
+      else if (mine) { b.className = 'btn chara-btn'; b.textContent = L('えらぶ'); }
       else {
         var can = wallet() >= ch.price;
         b.className = 'btn chara-btn buy' + (can ? '' : ' short');
-        b.innerHTML = icon('star') + ch.price + (can ? ' で かう' : '');
+        b.innerHTML = can ? L('{star}{price} で かう', { star: icon('star'), price: ch.price }) : icon('star') + ch.price;
       }
       b.addEventListener('click', function () { choose(ch, card); });
       card.appendChild(b);
@@ -554,12 +555,12 @@
     if (owns(ch.id)) { S.play('click'); save.chara = ch.id; store(); buildShop(); cheer(ch.id); return; }
     if (wallet() < ch.price) {
       S.play('lose'); shake(card);
-      showShopNote('あと ★' + (ch.price - wallet()) + ' で かえるよ');
+      showShopNote(L('あと ★{n} で かえるよ', { n: ch.price - wallet() }));
       return;
     }
     S.play('click');
     buying = ch;
-    $('buy-text').innerHTML = ch.name + 'を<br>' + icon('star') + ch.price + ' で かう？';
+    $('buy-text').innerHTML = L('{name}を<br>{star}{price} で かう？', { name: L(ch.name), star: icon('star'), price: ch.price });
     showPanel('buy');
   }
 
@@ -577,7 +578,7 @@
     for (var i = 0; i < 60; i++) {
       shop.fx.push({ kind: 'confetti', x: Math.random() * W, y: -20 - Math.random() * 160, vx: (Math.random() - 0.5) * 80, vy: 40 + Math.random() * 60, life: 2.6, max: 2.6, size: 4 + Math.random() * 3, rot: Math.random() * 6, color: ['#ff7fb5', '#ffd93d', '#7fd3ff', '#8ff08f', '#c79cff'][i % 5] });
     }
-    showShopNote(ch.name + 'が なかまに なったよ！');
+    showShopNote(L('{name}が なかまに なったよ！', { name: L(ch.name) }));
   }
 
   function cheer(id) { shop.cards.forEach(function (c) { if (c.id === id) c.happyT = shop.t; }); }
@@ -619,10 +620,10 @@
     drawDots();
   }
   function openAdmin() {
-    $('p-all').textContent = save.all ? '全ステージ解放：オン' : '全ステージ解放：オフ';
+    $('p-all').textContent = L(save.all ? '全ステージ解放：オン' : '全ステージ解放：オフ');
     $('p-all').classList.toggle('active', !!save.all);
-    $('p-reset').textContent = '記録をリセット';
-    $('p-info').textContent = 'あつめた★ ' + totalStars() + '　つかった★ ' + save.spent;
+    $('p-reset').textContent = L('記録をリセット');
+    $('p-info').textContent = L('あつめた★ {got}　つかった★ {spent}', { got: totalStars(), spent: save.spent });
     showPanel('parent');
   }
 
@@ -649,7 +650,7 @@
     S.setKey(WORLDS[wi].key || 0);
     show('play');
     if (!same || opts.showTip) hideTip();
-    if (lv.tip && (!same || opts.showTip)) showTip(TIPS[lv.tip] || lv.tip, lv);
+    if (lv.tip && (!same || opts.showTip)) showTip(L(TIPS[lv.tip] || lv.tip), lv);
     if (firstTime) { save.seen[skey(wi, si)] = 1; store(); }
     requestWake();
   }
@@ -696,6 +697,7 @@
     var allDone = WORLDS.every(function (wd, i) { return cleared(i, wd.stages.length - 1); });
     var title = got === 3 ? 'かんぺき！' : got === 2 ? 'すごい！' : 'やったね！';
     if (lastStage && first) title = wi === WORLDS.length - 1 && allDone ? 'ぜんぶ クリア！' : 'ワールド クリア！';
+    title = L(title);
     $('clear-title').textContent = title;
     $('clear-title').classList.toggle('long', title.length > 6);
     var slots = $('clear-stars').children;
@@ -921,7 +923,7 @@
     $('p-all').addEventListener('click', function () { save.all = !save.all; store(); openAdmin(); });
     var resetArmed = false;
     $('p-reset').addEventListener('click', function () {
-      if (!resetArmed) { resetArmed = true; $('p-reset').textContent = 'もう一度押すと消えます'; return; }
+      if (!resetArmed) { resetArmed = true; $('p-reset').textContent = L('もう一度押すと消えます'); return; }
       save.stars = {}; save.seen = {}; save.all = false;
       save.spent = 0; save.owned = ['frog']; save.chara = 'frog';
       store(); resetArmed = false; openAdmin(); refreshShopBadge();
@@ -966,6 +968,9 @@
 
   window.addEventListener('resize', resize);
   resize();
+  // the chosen language (js/lang.js): the title logo and the fixed text of the page
+  Lang.logo($('logo'), Lang.pick(GAME_LOGO), ['#86d65c', '#ff8fc0', '#ffb347', '#6cc6ff', '#b58cff', '#ff8fc0', '#ffd23d', '#86d65c', '#6cc6ff']);
+  Lang.apply();
   wire();
   history.replaceState({ d: 0 }, '');
   go('title');

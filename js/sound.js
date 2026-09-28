@@ -5,8 +5,18 @@ var Sound = (function () {
   var ac = null, master, sfxBus, musicBus, noiseBuf;
   var on = { sfx: true, music: true };
   var MUSIC_VOL = 0.2;
+  // Silent while the game is tried on the PC (localhost), so testing never makes a sound;
+  // add ?sound=1 to the address to hear it there (?mute=1 makes it silent anywhere).
+  var QUIET = (function () {
+    try {
+      var q = location.search, h = location.hostname;
+      if (/[?&]sound=1/.test(q)) return false;
+      return /[?&]mute=1/.test(q) || h === 'localhost' || h === '127.0.0.1';
+    } catch (e) { return false; }
+  }());
 
   function init() {
+    if (QUIET) return;
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;

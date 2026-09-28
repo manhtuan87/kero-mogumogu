@@ -32,6 +32,7 @@ python -m http.server 8765 --directory .
 ## おうちの方へ
 
 - ケロちゃん ランド（メニュー）で決めた なまえ（ニックネーム）が、タイトル画面の上に出ます
+- ことば：ケロちゃん ランド（メニュー）の 地球のボタンで 日本語・ベトナム語・英語・韓国語を えらべます（ぜんぶの ゲームが その ことばに なります。`localStorage` の `kero-lang`）
 
 - タイトル画面左上の家のボタンで、ゲームのメニュー「ケロちゃん ランド」（https://manhtuan87.github.io/）に もどれます
 
@@ -41,6 +42,8 @@ python -m http.server 8765 --directory .
 - 💡ボタンで、次にさわる場所を手のマークで教えてくれます
 
 ## 開発メモ
+
+- 多言語：`js/lang.js`（全ゲーム共通。日本語の文をキーに `L('日本語', {変数})` で訳を引く）と `js/lang-text.js`（このゲームの訳：[ベトナム語, 英語, 韓国語]）。新しい文言を足したら4言語そろえる
 
 - ステージは `js/levels.js`（ワールド1〜5）と `js/levels-more.js`（ワールド6〜15）。各ステージには検証済みの解（`sol`）が入っていて、ヒントもこれを使います
 - ワールド6〜15は `tools/design/gen.js` で候補を自動生成し、`tools/design/select.js` で12個ずつ選んでいます（`tools/design/preview.html?file=out/w6.jsonl` で候補を一覧表示）

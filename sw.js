@@ -6,11 +6,11 @@
    over at once, and the page reloads itself on the title screen.
    Other games on the same site (ケロちゃん ぴよぴよポン) share the cache storage,
    so only caches whose names start with "kero-" are ever deleted here. */
-var VERSION = 'kero-v6';
+var VERSION = 'kero-v7';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
-  'js/engine.js', 'js/levels-more.js', 'js/levels.js', 'js/draw.js', 'js/sound.js', 'js/game.js',
+  'js/lang.js', 'js/lang-text.js', 'js/engine.js', 'js/levels-more.js', 'js/levels.js', 'js/draw.js', 'js/sound.js', 'js/game.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
 
