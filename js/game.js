@@ -1,7 +1,7 @@
 /* ケロちゃん もぐもぐ — screens, input, effects and the main loop. */
 (function () {
   'use strict';
-  var E = window.Engine, D = window.Draw, S = window.Sound, WORLDS = window.LEVELS;
+  var E = window.Engine, D = window.Draw, S = window.Sound, SP = window.SoundPanel, WORLDS = window.LEVELS;
   var W = E.W, H = E.H, P = E.P;
   var FOODS = ['candy', 'strawberry', 'donut', 'cookie'];
   var $ = function (id) { return document.getElementById(id); };
@@ -403,6 +403,7 @@
     ['title', 'worlds', 'stages', 'shop', 'hud'].forEach(function (id) {
       $(id).classList.toggle('on', id === name || (name === 'play' && id === 'hud'));
     });
+    SP.hide(); SP.fit();   // (the sound window closes; long titles make room for the 🔊 button)
     if (name !== 'play') { hidePanel('clear'); hideTip(); releaseWake(); }
   }
 
@@ -926,6 +927,12 @@
     setIcon($('btn-music'), save.music ? 'music' : 'musicOff');
     $('btn-sfx').classList.toggle('off', !save.sfx);
     $('btn-music').classList.toggle('off', !save.music);
+    SP.refresh();
+  }
+  // One kind of sound on or off, from the buttons on the title or from the sound window (the 🔊 on the other screens).
+  function setSound(kind, value) {
+    save[kind] = value; S.set(kind, value); store(); refreshToggles();
+    if (kind === 'music') { if (value) S.startMusic(); else S.stopMusic(); } else S.play('click');
   }
 
   function wire() {
@@ -939,11 +946,10 @@
     $('btn-land').addEventListener('click', toLand);
     $('name-tag').addEventListener('click', function () { if (Accounts.list().length < 2) return; S.play('click'); openWho(); });
     $('who-close').addEventListener('click', function () { S.play('click'); hidePanel('who'); });
-    $('btn-sfx').addEventListener('click', function () { save.sfx = !save.sfx; S.set('sfx', save.sfx); store(); refreshToggles(); S.play('click'); });
-    $('btn-music').addEventListener('click', function () {
-      save.music = !save.music; S.set('music', save.music); store(); refreshToggles();
-      if (save.music) S.startMusic(); else S.stopMusic();
-    });
+    ['sfx', 'music'].forEach(function (k) { $('btn-' + k).addEventListener('click', function () { setSound(k, !save[k]); }); });
+    SP.init(['sfx', 'music'].map(function (k) {
+      return { id: k, label: { sfx: 'こうかおん', music: 'おんがく' }[k], icon: k, get: function () { return save[k]; }, set: function (v) { setSound(k, v); } };
+    }), { icon: icon, click: function () { S.play('click'); } });
     $('worlds-back').addEventListener('click', back);
     $('stages-back').addEventListener('click', back);
     $('h-home').addEventListener('click', back);
@@ -995,7 +1001,7 @@
     var dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000));
     lastT = now; clock += dt;
     if (screen === 'play' && game) {
-      updatePlay(dt);
+      if (!SP.isOpen()) updatePlay(dt);   // (the game waits while the sound window is open)
       drawBackground(WORLDS[game.wi].theme);
       if (game) game.scene.draw(ctx, game.hintOn ? game.hint : null);
     } else if (screen === 'title') {

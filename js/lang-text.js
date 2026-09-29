@@ -10,6 +10,7 @@ Lang.add({
   'ホームに ついか': ['Thêm vào màn hình', 'Add to Home', '홈 화면에 추가'],
   'こうかおん': ['Âm thanh', 'Sound effects', '효과음'],
   'おんがく': ['Nhạc', 'Music', '음악'],
+  'おと': ['Âm thanh', 'Sound', '소리'],
   'あそぶ': ['Chơi', 'Play', '놀자'],
   'おみせ': ['Cửa hàng', 'Shop', '가게'],
   '管理者メニュー': ['Menu quản lý', 'Admin menu', '관리자 메뉴'],
