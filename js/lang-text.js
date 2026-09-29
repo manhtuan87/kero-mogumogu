@@ -1,5 +1,8 @@
 /* ケロちゃん もぐもぐ in every language: [Tiếng Việt, English, 한국어] (see js/lang.js). */
 Lang.add({
+  'だれが あそぶ？': ['Ai chơi nào?', 'Who is playing?', '누가 할래?'],
+  'なまえなし': ['Chưa có tên', 'No name', '이름 없음'],
+  'とじる': ['Đóng', 'Close', '닫기'],
   // title
   'ケロちゃん もぐもぐ': ['Kero Măm Măm', 'Kero Munch Munch', '케로 냠냠'],
   'ロープを きって おやつを あげよう！': ['Cắt dây, cho Kero ăn bánh kẹo nào!', 'Cut the rope and feed Kero a treat!', '줄을 잘라서 케로에게 간식을 주자!'],

@@ -23,18 +23,41 @@
 
   // ---------------------------------------------------------------- save data
 
-  var SAVE_KEY = 'kero-mogumogu-v1';
+  // The records are kept per player (the players are shared by every game on the site: js/accounts.js);
+  // sound, music and the admin switch belong to the phone. Before the shared players there was one record for the
+  // phone ('kero-mogumogu-v1'): it becomes the first player's (the old key is left as it was).
+  var SAVE_KEY = 'kero-mogumogu-v2', OLD_KEY = 'kero-mogumogu-v1', DEVICE = ['sfx', 'music', 'all'];
+  function readKey(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  var root = (function () {
+    var r = readKey(SAVE_KEY);
+    if (!r || typeof r !== 'object' || !r.per || typeof r.per !== 'object') {
+      var old = readKey(OLD_KEY);
+      r = { v: 2, sfx: true, music: true, all: false, per: {} };
+      if (old && typeof old === 'object' && old.stars) {
+        DEVICE.forEach(function (k) { if (old[k] != null) r[k] = old[k]; delete old[k]; });
+        r.per[Accounts.list()[0].id] = old;
+      }
+    }
+    // (the records of a player removed from the shared list go)
+    var ids = Accounts.list().map(function (u) { return u.id; });
+    Object.keys(r.per).forEach(function (id) { if (ids.indexOf(id) < 0) delete r.per[id]; });
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(r)); } catch (e) { /* ignore */ }   // (kept in the new form at once)
+    return r;
+  }());
   var save = (function () {
-    var s = null;
-    try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { /* no storage */ }
-    if (!s || !s.stars) s = { stars: {}, sfx: true, music: true, all: false };
+    var id = Accounts.cur().id, s = root.per[id];
+    if (!s || typeof s !== 'object' || !s.stars) s = root.per[id] = { stars: {} };
+    DEVICE.forEach(function (k) {
+      delete s[k];
+      Object.defineProperty(s, k, { get: function () { return root[k]; }, set: function (v) { root[k] = v; }, enumerable: false, configurable: true });
+    });
     s.seen = s.seen || {};
     s.spent = s.spent || 0;            // ★ spent in the shop
     s.owned = s.owned || ['frog'];     // characters bought
     s.chara = s.chara || 'frog';       // character in use
     return s;
   }());
-  function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
+  function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(root)); } catch (e) { /* ignore */ } }
   function skey(wi, si) { return wi + '-' + si; }
   function cleared(wi, si) { return save.stars[skey(wi, si)] != null; }
   function starsOf(wi, si) { return save.stars[skey(wi, si)] || 0; }
@@ -386,19 +409,40 @@
   // Android back button walks back through the screens.
   var depth = 0;
   function forward(fn) { depth++; history.pushState({ d: depth }, ''); fn(); }
-  // The nickname set in ケロちゃん ランド (every game on the site reads the same key), shown on the title screen.
+  // The player now playing, on the title screen (chosen in ケロちゃん ランド; the players are shared by every game,
+  // js/accounts.js). With two or more players, a tap on it switches players.
+  function dot(u) { return '<i class="udot" style="background:' + Accounts.COLORS[u.color] + '"></i>'; }
   function refreshNameTag() {
-    var n = '', el = $('name-tag');
-    try { n = (localStorage.getItem('kero-name') || '').trim().slice(0, 10); } catch (e) { /* no storage */ }
-    el.hidden = !n;
-    el.innerHTML = '';
-    if (!n) return;
-    el.innerHTML = icon('star');
+    var el = $('name-tag'), u = Accounts.cur(), many = Accounts.list().length > 1;
+    el.hidden = !u.name && !many;
+    el.classList.toggle('many', many);
+    el.innerHTML = dot(u);
     var sp = document.createElement('span');
-    sp.textContent = n;
+    sp.textContent = u.name || L('なまえなし');
     el.appendChild(sp);
   }
-  window.addEventListener('pageshow', function () { refreshNameTag(); });
+  function openWho() {
+    var box = $('who-list'), now = Accounts.cur().id;
+    box.innerHTML = '';
+    Accounts.list().forEach(function (u) {
+      var b = document.createElement('button');
+      b.className = 'btn who-btn' + (u.id === now ? ' on' : '');
+      b.innerHTML = dot(u);
+      var sp = document.createElement('span');
+      sp.textContent = u.name || L('なまえなし');
+      b.appendChild(sp);
+      b.addEventListener('click', function () {
+        S.play('click');
+        if (u.id === now) { hidePanel('who'); return; }
+        Accounts.setCur(u.id);
+        location.reload();   // (the game starts again with that player's records)
+      });
+      box.appendChild(b);
+    });
+    showPanel('who');
+  }
+  // (the players may have been changed in ケロちゃん ランド or another game meanwhile)
+  window.addEventListener('pageshow', function (e) { if (e.persisted && Accounts.changed()) location.reload(); else refreshNameTag(); });
 
   function go(name) {
     if (name === 'title') { show('title'); refreshNameTag(); newDemo(); refreshShopBadge(); }
@@ -893,6 +937,8 @@
 
     $('btn-play').addEventListener('click', function () { S.play('click'); forward(function () { go('worlds'); }); });
     $('btn-land').addEventListener('click', toLand);
+    $('name-tag').addEventListener('click', function () { if (Accounts.list().length < 2) return; S.play('click'); openWho(); });
+    $('who-close').addEventListener('click', function () { S.play('click'); hidePanel('who'); });
     $('btn-sfx').addEventListener('click', function () { save.sfx = !save.sfx; S.set('sfx', save.sfx); store(); refreshToggles(); S.play('click'); });
     $('btn-music').addEventListener('click', function () {
       save.music = !save.music; S.set('music', save.music); store(); refreshToggles();

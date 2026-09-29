@@ -19,7 +19,7 @@
 <canvas id="game"></canvas>
 <div id="stage">
   <section id="title" class="screen on">
-    <div id="name-tag" class="name-tag" hidden></div>
+    <button id="name-tag" class="name-tag" hidden></button>
     <button id="btn-land" class="btn icon small land" data-icon="home" aria-label="メニューに もどる"></button>
     <button id="btn-install" class="btn small install" hidden><span data-icon="install"></span>ホームに ついか</button>
     <div class="top-row"><button id="btn-sfx" class="btn icon small" aria-label="こうかおん"></button><button id="btn-music" class="btn icon small" aria-label="おんがく"></button></div>
@@ -95,6 +95,14 @@
     </div>
   </div>
 
+  <div id="who" class="panel">
+    <div class="panel-card who-card">
+      <div class="parent-title">だれが あそぶ？</div>
+      <div id="who-list" class="who-list"></div>
+      <button id="who-close" class="btn">とじる</button>
+    </div>
+  </div>
+
   <div id="parent" class="panel">
     <div class="panel-card parent-card">
       <div class="parent-title">管理者メニュー</div>
@@ -107,6 +115,7 @@
 </div>
 <script src="js/lang.js"></script>
 <script src="js/lang-text.js"></script>
+<script src="js/accounts.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/levels-more.js"></script>
 <script src="js/levels.js"></script>
