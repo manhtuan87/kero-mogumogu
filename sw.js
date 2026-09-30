@@ -6,7 +6,7 @@
    over at once, and the page reloads itself on the title screen.
    Other games on the same site (ケロちゃん ぴよぴよポン) share the cache storage,
    so only caches whose names start with "kero-" are ever deleted here. */
-var VERSION = 'kero-v10';
+var VERSION = 'kero-v11';
 var FONTS = 'kero-fonts';
 var FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',

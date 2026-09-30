@@ -52,6 +52,13 @@ Lang.add({
   'くるくる まわる トゲに きをつけて。すきまを ねらってね': ['Cẩn thận gai quay tròn. Canh khe hở nhé', 'Watch the spinning spikes. Aim for the gap', '빙글빙글 도는 가시를 조심해. 틈을 노려 봐'],
   // clear
   'かんぺき！': ['Hoàn hảo!', 'Perfect!', '완벽해!'],
+  // おに (2026-09-30; no Korean from here on)
+  'おに': ['Siêu khó', 'Super hard'],
+  'おに クリア！': ['Qua mức Siêu khó!', 'Super hard clear!'],
+  'じかん ぎれ！': ['Hết giờ rồi!', 'Time’s up!'],
+  '★を 3つ ぜんぶ とってね': ['Hãy lấy đủ cả 3 ★ nhé', 'Get all three ★!'],
+  '★3つ とると おにで あそべるよ': ['Được ★3 thì chơi được mức Siêu khó', 'Get ★3 to play it on Super hard'],
+  '★3つ とった ステージを、じかん いないに ★を ぜんぶ とって クリアしよう！': ['Chơi lại màn đã được ★3: lấy đủ ★ trước khi hết giờ nhé!', 'Replay the ★3 stages: get every ★ before the time runs out!'],
   'すごい！': ['Giỏi quá!', 'Great!', '대단해!'],
   'やったね！': ['Làm được rồi!', 'You did it!', '해냈다!'],
   'ぜんぶ クリア！': ['Qua hết rồi!', 'All clear!', '모두 클리어!'],

@@ -55,6 +55,7 @@
     s.spent = s.spent || 0;            // ★ spent in the shop
     s.owned = s.owned || ['frog'];     // characters bought
     s.chara = s.chara || 'frog';       // character in use
+    s.oni = s.oni || {};               // the stages cleared at おに
     return s;
   }());
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(root)); } catch (e) { /* ignore */ } }
@@ -63,6 +64,19 @@
   function starsOf(wi, si) { return save.stars[skey(wi, si)] || 0; }
   function worldOpen(wi) { return save.all || wi === 0 || cleared(wi - 1, WORLDS[wi - 1].stages.length - 1); }
   function stageOpen(wi, si) { return save.all || (worldOpen(wi) && (si === 0 || cleared(wi, si - 1))); }
+  // おに (2026-09-30): a stage cleared with ★3 can be played again as おに (the admin switch opens every stage)
+  function oniOpen(wi, si) { return save.all || starsOf(wi, si) >= 3; }
+  // Its time: what the checked solution needs to feed the frog, × 1.3 and 4 s more (rounded up)
+  var oniTimes = {};
+  function oniLimit(wi, si) {
+    var k = skey(wi, si);
+    if (oniTimes[k] == null) {
+      var lv = WORLDS[wi].stages[si], res = E.run(lv, lv.sol, 30);
+      oniTimes[k] = Math.ceil((res.state === 'won' ? res.t : 12) * 1.3 + 4);
+    }
+    return oniTimes[k];
+  }
+  var stagesOni = false;   // (the stage list shows おに)
   function worldStars(wi) {
     var n = 0;
     for (var i = 0; i < WORLDS[wi].stages.length; i++) n += starsOf(wi, i);
@@ -100,18 +114,32 @@
     bg.canvas = null;
   }
 
+  // おに: the whole background turns reddish and darker at the edges.
+  function oniTint(b, v) {
+    b.save();
+    b.fillStyle = 'rgba(214,40,57,.2)';
+    b.fillRect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0);
+    var cx = (v.x0 + v.x1) / 2, cy = (v.y0 + v.y1) / 2, rr = Math.hypot(v.x1 - v.x0, v.y1 - v.y0) / 2;
+    var g = b.createRadialGradient(cx, cy, rr * 0.45, cx, cy, rr);
+    g.addColorStop(0, 'rgba(90,10,20,0)'); g.addColorStop(1, 'rgba(90,10,20,.32)');
+    b.fillStyle = g;
+    b.fillRect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0);
+    b.restore();
+  }
   function worldTransform(c) { c.setTransform(view.dpr * view.s, 0, 0, view.dpr * view.s, view.dpr * view.ox, view.dpr * view.oy); }
 
-  function drawBackground(theme) {
+  function drawBackground(theme, oni) {
     if (!(view.s > 0)) return;   // (a window with no size yet)
-    if (!bg.canvas || bg.theme !== theme) {
+    var key = theme + (oni ? '/oni' : '');
+    if (!bg.canvas || bg.theme !== key) {
       bg.canvas = document.createElement('canvas');
       bg.canvas.width = canvas.width; bg.canvas.height = canvas.height;
       var b = bg.canvas.getContext('2d');
       worldTransform(b);
       var x0 = -view.ox / view.s, y0 = -view.oy / view.s;
       D.background(b, theme, x0, y0, x0 + view.cw / view.s, y0 + view.ch / view.s);
-      bg.theme = theme;
+      if (oni) oniTint(b, { x0: x0, y0: y0, x1: x0 + view.cw / view.s, y1: y0 + view.ch / view.s });
+      bg.theme = key;
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(bg.canvas, 0, 0);
@@ -232,7 +260,7 @@
 
     var look = w.state === 'play' || w.state === 'lost' ? w.candy : null;
     var f = this.frog;
-    D.critter(c, { x: w.frog.x, y: w.frog.y, t: t, look: look, open: f.open, mode: f.mode, mt: f.mt, blink: f.blink, perch: w.frog.y < 530, kind: save.chara });
+    D.critter(c, { x: w.frog.x, y: w.frog.y, t: t, look: look, open: f.open, mode: f.mode, mt: f.mt, blink: f.blink, perch: w.frog.y < 530, kind: save.chara, horns: !!this.oni });
 
     for (i = 0; i < w.pieces.length; i++) D.rope(c, w.pieces[i].pts, w.pieces[i].fade);
     for (i = 0; i < w.ropes.length; i++) D.rope(c, w.ropes[i].pts, 1);
@@ -531,19 +559,26 @@
     $('stages-title').textContent = wname;
     $('stages-title').classList.toggle('long', wname.length > (Lang.cur === 'ja' ? 9 : 16));
     grid.innerHTML = '';
+    grid.classList.toggle('oni', stagesOni);
+    $('stages-oni').classList.toggle('on', stagesOni);
+    $('stages-note').textContent = stagesOni ? L('★3つ とった ステージを、じかん いないに ★を ぜんぶ とって クリアしよう！') : '';
     var nextSet = false;
     wd.stages.forEach(function (lv, si) {
-      var open = stageOpen(curWorld, si), b = document.createElement('button');
-      b.className = 'stage-btn' + (open ? '' : ' locked');
-      if (open && !cleared(curWorld, si) && !nextSet) { b.classList.add('next'); nextSet = true; }
+      var open = stagesOni ? oniOpen(curWorld, si) : stageOpen(curWorld, si), b = document.createElement('button');
+      b.className = 'stage-btn' + (open ? '' : ' locked') + (stagesOni ? ' oni' : '');
+      if (!stagesOni && open && !cleared(curWorld, si) && !nextSet) { b.classList.add('next'); nextSet = true; }
       if (open) {
         var st = starsOf(curWorld, si), s = '';
         for (var k = 0; k < 3; k++) s += '<i class="' + (k < st ? 'got' : '') + '">' + icon('star') + '</i>';
-        b.innerHTML = '<span class="num">' + (si + 1) + '</span><span class="mini-stars">' + s + '</span>';
+        b.innerHTML = '<span class="num">' + (si + 1) + '</span><span class="mini-stars">' + s + '</span>' +
+          (save.oni[skey(curWorld, si)] ? '<span class="oni-mark">' + icon('horns') + '</span>' : '');   // (cleared at おに)
       } else b.innerHTML = icon('lock');
       b.addEventListener('click', function () {
-        if (!stageOpen(curWorld, si)) { S.play('lose'); shake(b); return; }
-        S.play('click'); forward(function () { startLevel(curWorld, si); });
+        if (stagesOni && !oniOpen(curWorld, si)) {   // (おに: only a stage cleared with ★3)
+          S.play('lose'); shake(b); $('stages-note').textContent = L('★3つ とると おにで あそべるよ'); return;
+        }
+        if (!stagesOni && !stageOpen(curWorld, si)) { S.play('lose'); shake(b); return; }
+        S.play('click'); forward(function () { startLevel(curWorld, si, { oni: stagesOni }); });
       });
       grid.appendChild(b);
     });
@@ -679,16 +714,20 @@
     var lv = WORLDS[wi].stages[si];
     var same = game && game.wi === wi && game.si === si;
     var firstTime = !cleared(wi, si) && lv.tip && !save.seen[skey(wi, si)];
+    var oni = !!opts.oni;
     game = {
       wi: wi, si: si, level: lv,
       fails: same ? game.fails : 0,
-      hintOn: opts.hint || (same && game.hintOn) || firstTime,
-      doneShown: false
+      hintOn: !oni && (opts.hint || (same && game.hintOn) || firstTime),   // (おに: no 💡)
+      doneShown: false,
+      oni: oni, oniT: 0, limit: oni ? oniLimit(wi, si) : 0, oniMsg: ''
     };
     game.scene = new Scene(lv, foodOf(wi, si), onPlayEvent);
+    game.scene.oni = oni;
     game.hint = makeHint(lv);
     curWorld = wi;
-    $('h-label').textContent = (wi + 1) + ' - ' + (si + 1);
+    $('h-label').innerHTML = (wi + 1) + ' - ' + (si + 1) + (oni ? '<small class="oni-tag">' + L('おに') + '</small>' : '');
+    $('h-hint').hidden = oni;
     setHudStars(0);
     $('h-hint').classList.toggle('glow', game.fails >= 3 && !game.hintOn);
     $('h-hint').classList.toggle('active', !!game.hintOn);
@@ -719,14 +758,32 @@
     var sc = game.scene, w = sc.world;
     sc.update(dt);
     if (game.hintOn) updateHint(game.hint, w);
+    if (game.oni) {   // (おに: the time runs from the start; every ★ is needed)
+      var need = (game.level.stars || []).length;
+      if (w.state === 'play') {
+        game.oniT += dt;
+        if (game.oniT > game.limit) { w.lose('time'); game.oniMsg = L('じかん ぎれ！'); showTip(game.oniMsg, game.level); }
+      }
+      if (w.state === 'won' && w.got < need && !game.oniMsg) { game.oniMsg = L('★を 3つ ぜんぶ とってね'); S.play('lose'); showTip(game.oniMsg, game.level); }
+      if (w.state === 'won' && w.got < need && sc.endT > 1.8) { hideTip(); startLevel(game.wi, game.si, { oni: true }); return; }
+    }
     if (w.state === 'won' && !game.doneShown && sc.endT > 1.6) { game.doneShown = true; showClear(); }
-    if (w.state === 'lost' && sc.endT > 1.5) startLevel(game.wi, game.si);
+    if (w.state === 'lost' && sc.endT > (game.oniMsg ? 1.8 : 1.5)) { if (game.oniMsg) hideTip(); startLevel(game.wi, game.si, { oni: game.oni }); }
+  }
+  // おに: the time left, as a bar under the top buttons (what went wrong is said in ケロちゃん's bubble)
+  function drawOni(c) {
+    if (!game || !game.oni) return;
+    worldTransform(c);
+    var k = Math.max(0, 1 - game.oniT / game.limit);
+    D.roundRect(c, 70, 66, 220, 14, 7); D.paint(c, 'rgba(255,255,255,.85)', D.INK, 2.5);
+    if (k > 0.01) { D.roundRect(c, 72, 68, 216 * k, 10, 5); D.paint(c, k > 0.5 ? '#86d65c' : k > 0.25 ? '#ffc21a' : '#ff5a5a'); }
   }
 
-  function retry() { S.play('click'); startLevel(game.wi, game.si); }
+  function retry() { S.play('click'); startLevel(game.wi, game.si, { oni: game.oni }); }
 
   function toggleHint() {
     S.play('click');
+    if (game.oni) return;   // (おに: no 💡)
     game.hintOn = !game.hintOn;
     startLevel(game.wi, game.si, { hint: game.hintOn });
   }
@@ -741,7 +798,8 @@
     var lastStage = si === WORLDS[wi].stages.length - 1;
     var allDone = WORLDS.every(function (wd, i) { return cleared(i, wd.stages.length - 1); });
     var title = got === 3 ? 'かんぺき！' : got === 2 ? 'すごい！' : 'やったね！';
-    if (lastStage && first) title = wi === WORLDS.length - 1 && allDone ? 'ぜんぶ クリア！' : 'ワールド クリア！';
+    if (game.oni) { title = 'おに クリア！'; save.oni[skey(wi, si)] = 1; store(); }   // (おに: a horn mark on the stage)
+    else if (lastStage && first) title = wi === WORLDS.length - 1 && allDone ? 'ぜんぶ クリア！' : 'ワールド クリア！';
     title = L(title);
     $('clear-title').textContent = title;
     $('clear-title').classList.toggle('long', title.length > 6);
@@ -771,6 +829,11 @@
     S.play('click');
     hidePanel('clear');
     var wi = game.wi, si = game.si + 1;
+    if (game.oni) {   // (おに: the next stage too, if it has ★3; otherwise back to the list)
+      if (si < WORLDS[wi].stages.length && oniOpen(wi, si)) { startLevel(wi, si, { oni: true }); return; }
+      if (depth > 0) history.back(); else go('stages');
+      return;
+    }
     if (si >= WORLDS[wi].stages.length) {
       if (wi + 1 < WORLDS.length) curWorld = wi + 1;
       if (depth > 0) history.back(); else go('stages');
@@ -899,6 +962,7 @@
   // ---------------------------------------------------------------- icons
 
   var ICONS = {
+    horns: '<path d="M4.5 20.5c-.4-5.6.6-11 3.4-16.5 1.9 4.3 3.1 9.5 3.3 16.5z" fill="currentColor"/><path d="M19.5 20.5c.4-5.6-.6-11-3.4-16.5-1.9 4.3-3.1 9.5-3.3 16.5z" fill="currentColor"/>',   // (おに)
     home: '<path d="M4 11.5 12 4.5l8 7V20h-5.5v-5.5h-5V20H4z"/>',
     retry: '<path d="M19 12.5a7 7 0 1 1-2.3-5.2"/><path d="M17.5 3v4.8h-4.8"/>',
     hint: '<path d="M9.2 17.5h5.6M10 20.5h4M12 3.5a5.8 5.8 0 0 0-3.6 10.3c.7.6.8 1.6.8 2.2h5.6c0-.6.1-1.6.8-2.2A5.8 5.8 0 0 0 12 3.5z"/>',
@@ -958,6 +1022,7 @@
     $('c-retry').addEventListener('click', function () { hidePanel('clear'); retry(); });
     $('c-next').addEventListener('click', nextStage);
     $('c-menu').addEventListener('click', function () { hidePanel('clear'); back(); });
+    $('stages-oni').addEventListener('click', function () { S.play('click'); stagesOni = !stagesOni; buildStages(); });
     $('tip').addEventListener('click', hideTip);
 
     // shop
@@ -1002,8 +1067,8 @@
     lastT = now; clock += dt;
     if (screen === 'play' && game) {
       if (!SP.isOpen()) updatePlay(dt);   // (the game waits while the sound window is open)
-      drawBackground(WORLDS[game.wi].theme);
-      if (game) game.scene.draw(ctx, game.hintOn ? game.hint : null);
+      drawBackground(WORLDS[game.wi].theme, game.oni);
+      if (game) { game.scene.draw(ctx, game.hintOn ? game.hint : null); drawOni(ctx); }
     } else if (screen === 'title') {
       updateDemo(dt);
       drawBackground(0);

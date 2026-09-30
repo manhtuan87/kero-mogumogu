@@ -176,6 +176,25 @@ button { pointer-events: auto; }
 .stage-btn.next { background: linear-gradient(#fffbd6, #ffe27a); animation: pulse 1.2s ease-in-out infinite; }
 .stage-btn.locked { background: #ddd3c9; color: #8b7a6c; }
 .stage-btn.locked svg { width: 34px; height: 34px; }
+/* おに: the switch under the stages, the stages in red, the horn mark of a stage cleared at おに */
+.oni-toggle {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); height: 50px; padding: 0 22px;
+  display: flex; align-items: center; gap: 8px; font: 800 20px/1 var(--font); color: #b8232f;
+  background: #ffe1dd; border: 3px solid var(--ink); border-radius: 999px; box-shadow: 0 4px 0 var(--ink);
+}
+.oni-toggle.on { background: linear-gradient(#ff8f8f, #e5484d); color: #fff; }
+.oni-toggle .horns { line-height: 0; color: #e5484d; }
+.oni-toggle.on .horns { color: #fff3b0; }
+.oni-toggle .horns svg { width: 26px; height: 20px; }
+.stages-note { position: absolute; left: 20px; right: 20px; top: 74px; margin: 0; text-align: center; font-size: 13px; font-weight: 800; line-height: 1.3; color: #b8232f; }
+/* (おに: the note above the stages, so the stages sit a little lower and shorter) */
+.stage-grid.oni { top: 118px; }
+.stage-grid.oni .stage-btn { height: 96px; }
+.stage-grid.oni .stage-btn:not(.locked) { background: linear-gradient(#fff2f0 50%, #ffd6d0); }
+.stage-btn { position: relative; }
+.stage-btn .oni-mark { position: absolute; right: 6px; top: 6px; line-height: 0; color: #e5484d; }
+.stage-btn .oni-mark svg { width: 20px; height: 15px; }
+.hud-mid .oni-tag { margin-left: 6px; font-size: 11px; color: #fff; background: #e5484d; border: 2px solid var(--ink); border-radius: 999px; padding: 1px 6px; }
 .mini-stars { display: flex; gap: 1px; }
 .mini-stars i svg { width: 21px; height: 21px; color: #eadfd3; }
 .mini-stars i.got svg { color: var(--gold); }

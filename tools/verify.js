@@ -87,7 +87,10 @@ if (require.main === module) WORLDS.forEach((wd, wi) => {
     if (!inBounds(lv)) problems.push('object out of bounds');
     if (problems.length) bad++;
     const wtxt = wins.map((w, i) => `${acts[i].a}@${acts[i].t}[${w[0] + w[1] ? (w[0] + w[1]).toFixed(2) : '0'}|${(clears[i][0] + clears[i][1]).toFixed(2)}]`).join(' ');
-    console.log(`${problems.length ? 'NG' : 'ok'} ${id.padEnd(5)} ★${res.stars} t=${res.t.toFixed(1)} 3★win=${minW.toFixed(2)}s clear=${minC.toFixed(2)}s  ${wtxt}${problems.length ? '  <-- ' + problems.join(', ') : ''}`);
+    // おに: the time a stage gives (as in game.js: the solution's time × 1.3 and 4 s more) must leave room to spare
+    const oni = Math.ceil(res.t * 1.3 + 4);
+    if (!(oni >= res.t + 3 && oni <= 30)) problems.push(`おに time ${oni}s`);
+    console.log(`${problems.length ? 'NG' : 'ok'} ${id.padEnd(5)} ★${res.stars} t=${res.t.toFixed(1)} おに=${oni}s 3★win=${minW.toFixed(2)}s clear=${minC.toFixed(2)}s  ${wtxt}${problems.length ? '  <-- ' + problems.join(', ') : ''}`);
   });
 });
 if (require.main === module) {

@@ -165,12 +165,28 @@ var Draw = (function () {
     circle(ctx, 36, 8, 2.4); paint(ctx, 'rgba(70,160,50,.35)');
     eyes(ctx, f, 20, -22, 1, [GREEN, GREEN]);
     bow(ctx, 30, -38);
+    if (f.horns) horns(ctx, 0, -25, 1);   // (おに)
     cheeks(ctx, f, 31, 4);
     mouth(ctx, f, 0, function () {
       ctx.beginPath(); ctx.moveTo(-12, 1); ctx.quadraticCurveTo(0, 12, 12, 1); paint(ctx, null, INK, 3);
     });
     ctx.restore();
     tears(ctx, f, 22);
+  }
+
+  // おに: two little oni horns on the head (x, y: between them, at their roots)
+  function horns(ctx, x, y, s) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (var k = -1; k <= 1; k += 2) {
+      ctx.save(); ctx.translate(k * 9, 0); ctx.rotate(k * 0.32);
+      ctx.beginPath(); ctx.moveTo(-6.5, 4); ctx.quadraticCurveTo(-5.5, -9, k * 2.4, -21); ctx.quadraticCurveTo(5.5, -9, 6.5, 4); ctx.closePath();
+      paint(ctx, '#fff1b3', INK, 2.6);
+      ctx.beginPath(); ctx.moveTo(-5, -3); ctx.quadraticCurveTo(0, -5.5, 5, -3); paint(ctx, null, '#f0a93a', 2.4);
+      ctx.beginPath(); ctx.moveTo(-3.6, -10); ctx.quadraticCurveTo(k, -12, 3.8, -10); paint(ctx, null, '#f0a93a', 2);
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   // --- friends from the shop: ミミちゃん (rabbit), ニャーちゃん (cat), ワンちゃん (dog)
@@ -246,6 +262,7 @@ var Draw = (function () {
       }
     }
     eyes(ctx, f, 17, -10, 0.85, [sp.body, kind === 'dog' ? sp.patch : sp.body]);
+    if (f.horns) horns(ctx, 0, -29, 0.9);   // (おに)
     cheeks(ctx, f, 29, 7);
     // nose
     if (kind === 'dog') {
@@ -692,7 +709,7 @@ var Draw = (function () {
     ctx.restore();
   }
 
-  return {
+  return { horns: horns,
     INK: INK, THEMES: THEMES,
     circle: circle, ellipse: ellipse, paint: paint, roundRect: roundRect,
     frog: frog, critter: critter, food: food, rope: rope, pin: pin, rail: rail, star: star, starPath: starPath,
