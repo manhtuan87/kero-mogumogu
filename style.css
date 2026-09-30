@@ -176,9 +176,11 @@ button { pointer-events: auto; }
 .stage-btn.next { background: linear-gradient(#fffbd6, #ffe27a); animation: pulse 1.2s ease-in-out infinite; }
 .stage-btn.locked { background: #ddd3c9; color: #8b7a6c; }
 .stage-btn.locked svg { width: 34px; height: 34px; }
-/* おに: the switch under the stages, the stages in red, the horn mark of a stage cleared at おに */
+/* おに: the switch under the stages, the stages in red, the horn mark of a stage cleared at おに.
+   (Centred with margins, not with a transform: .btn:active sets the transform, so a transform-centred switch
+   jumped half its width to the right when pressed, away from the finger.) */
 .oni-toggle {
-  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); height: 50px; padding: 0 22px;
+  position: absolute; left: 0; right: 0; bottom: 14px; width: max-content; margin: 0 auto; height: 50px; padding: 0 22px;
   display: flex; align-items: center; gap: 8px; font: 800 20px/1 var(--font); color: #b8232f;
   background: #ffe1dd; border: 3px solid var(--ink); border-radius: 999px; box-shadow: 0 4px 0 var(--ink);
 }
@@ -186,7 +188,7 @@ button { pointer-events: auto; }
 .oni-toggle .horns { line-height: 0; color: #e5484d; }
 .oni-toggle.on .horns { color: #fff3b0; }
 .oni-toggle .horns svg { width: 26px; height: 20px; }
-.stages-note { position: absolute; left: 20px; right: 20px; top: 74px; margin: 0; text-align: center; font-size: 13px; font-weight: 800; line-height: 1.3; color: #b8232f; }
+.stages-note { position: absolute; left: 20px; right: 20px; top: 74px; margin: 0; text-align: center; font-size: 13px; font-weight: 800; line-height: 1.3; color: #b8232f; word-break: keep-all; overflow-wrap: anywhere; }
 /* (おに: the note above the stages, so the stages sit a little lower and shorter) */
 .stage-grid.oni { top: 118px; }
 .stage-grid.oni .stage-btn { height: 96px; }
